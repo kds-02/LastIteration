@@ -17,6 +17,7 @@ public class PlayerMove : MonoBehaviour
     [SerializeField] private float crouchingHeight = 1f;
 
     private CharacterController controller;
+    private Animator animator;
     private Vector3 velocity;
     private Vector3 currentMoveVelocity;
     private bool isGrounded;
@@ -25,6 +26,7 @@ public class PlayerMove : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        animator = GetComponent<Animator>();
         standingHeight = controller.height;
     }
 
@@ -105,6 +107,23 @@ public class PlayerMove : MonoBehaviour
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
-    }
 
+        // Animator 파라미터 업데이트
+        if (animator != null)
+        {
+            // 로컬 좌표계로 변환 (캐릭터 기준 방향)
+            Vector3 localVelocity = transform.InverseTransformDirection(currentMoveVelocity);
+
+            animator.SetFloat("Horizontal", localVelocity.x);
+            animator.SetFloat("Vertical", localVelocity.z);
+
+            // Speed: 0 = Walk, 1 = Run
+            float speed = Input.GetKey(KeyCode.LeftShift) ? 1f : 0f;
+            animator.SetFloat("Speed", speed);
+
+            animator.SetBool("IsCrouching", isCrouching);
+            animator.SetBool("IsGrounded", isGrounded);
+            animator.SetBool("IsJumping", !isGrounded);
+        }
+    }
 }
