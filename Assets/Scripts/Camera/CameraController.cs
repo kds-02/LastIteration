@@ -17,6 +17,10 @@ public class CameraController : MonoBehaviour
     public bool isDeathView = false;
     private Quaternion deathViewRotation;
 
+    [Header("플레이어 동기화")]
+    public bool syncPlayerYaw = true;
+    public float playerYawSpeed = 12f;   // 회전 속도(스무딩)
+
     private float mouseX, mouseY;
     private Camera cam;
 
@@ -57,12 +61,28 @@ public class CameraController : MonoBehaviour
         Quaternion rotation = Quaternion.Euler(mouseY, mouseX, 0f);
         transform.rotation = rotation;
 
+        // 카메라 Yaw(mouseX)와 플레이어 Yaw를 동기화
+        if (syncPlayerYaw && playerTransform != null && !isDeathView)
+        {
+            // 플레이어는 수평(Yaw)만 회전하도록 pitch(상하)는 제외
+            Quaternion playerTargetRot = Quaternion.Euler(0f, mouseX, 0f);
+
+            // 스무스 회전
+            playerTransform.rotation = Quaternion.Slerp(
+                playerTransform.rotation,
+                playerTargetRot,
+                playerYawSpeed * Time.deltaTime
+            );
+        }
+
         // 카메라 위치는 플레이어 기준 고정 (오프셋만 적용)
         Vector3 desiredOffset = isAiming ? aimOffset : offset;
         // Vector3 targetPosition = playerTransform.position + rotation * desiredOffset;
         Vector3 targetPosition = playerTransform.position + desiredOffset;
         transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * aimTransitionSpeed);
     }
+
+
 
     private void HandleMouseRotation()
     {

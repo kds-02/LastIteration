@@ -64,7 +64,35 @@ public class PlayerMove : MonoBehaviour
         if (Input.GetKey(KeyCode.A)) horizontal = -1f;
         if (Input.GetKey(KeyCode.D)) horizontal = 1f;
 
-        Vector3 inputDirection = transform.right * horizontal + transform.forward * vertical;
+        // 수정: 카메라가 바라보는 방향 기준으로 이동
+        Transform cam = Camera.main.transform;
+
+        // 카메라의 앞/오른쪽 벡터 (y값 제거 → 평지 이동 유지)
+        Vector3 camForward = cam.forward;
+        Vector3 camRight = cam.right;
+
+        camForward.y = 0f;
+        camRight.y = 0f;
+
+        camForward.Normalize();
+        camRight.Normalize();
+
+        Vector3 inputDirection = camRight * horizontal + camForward * vertical;
+
+        // 플레이어를 이동 방향으로 회전시키기
+        if (inputDirection.magnitude > 0.1f)
+        {
+            // 목표 회전
+            Quaternion targetRotation = Quaternion.LookRotation(inputDirection);
+
+            // 스무스 회전
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                10f * Time.deltaTime        // 회전 속도 (필요하면 조절 가능)
+            );
+        }
+
 
         // 속도 결정: 앉기 > 걷기(기본) > 뛰기(Shift)
         float targetSpeed;

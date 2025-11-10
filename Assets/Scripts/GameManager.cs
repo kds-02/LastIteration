@@ -15,7 +15,7 @@ public class NewBehaviourScript : MonoBehaviour
 
     void Start()
     {
-        leftTime = 10;
+        leftTime = 300;
         isGameover = false;
     }
 
