@@ -1,27 +1,36 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
-    public float speed = 20f;      
-    public float lifetime = 3f;    
-    
-    void Start()
+    public float speed = 20f;
+    public float lifetime = 3f;
+
+    [Header("Combat")]
+    public float damage = 34f;
+    public int shooterId = -1;  // Gun에서 세팅
+
+    Rigidbody rb;
+
+    void Awake()
     {
-        // 3초 후 총알 삭제
+        rb = GetComponent<Rigidbody>();
+    }
+
+    void OnEnable()
+    {
         Destroy(gameObject, lifetime);
+        if (rb != null) rb.velocity = transform.forward * speed;
     }
-    
-    void Update()
-    {
-        Vector3 dir = transform.forward;
-        transform.position += dir * speed * Time.deltaTime;
-    }
-    
-    // 무언가와 충돌하면
+
     void OnCollisionEnter(Collision collision)
     {
-        Destroy(gameObject);  // 총알 제거
+        // 플레이어 여부 탐색(자식 콜라이더 고려)
+        var state = collision.collider.GetComponentInParent<PlayerState>();
+        if (state != null && !state.IsDead())
+        {
+            state.TakeDamage(damage, shooterId);
+        }
+
+        Destroy(gameObject);
     }
 }

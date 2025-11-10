@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Gun : MonoBehaviour
@@ -13,14 +12,14 @@ public class Gun : MonoBehaviour
     [SerializeField] private KeyCode fireKey = KeyCode.Mouse0;
 
     [Header("탄창 설정")]
-    [SerializeField] private int maxAmmo = 10;          
-    [SerializeField] private float reloadTime = 2f;    
+    [SerializeField] private int maxAmmo = 10;
+    [SerializeField] private float reloadTime = 2f;
     [SerializeField] private bool autoReload = true;
     [SerializeField] private KeyCode reloadKey = KeyCode.R;
 
     [Header("재장전 애니메이션")]
-    [SerializeField] private Transform magTransform;       
-    [SerializeField] private float magDropDistance = 0.5f; 
+    [SerializeField] private Transform magTransform;
+    [SerializeField] private float magDropDistance = 0.5f;
     [SerializeField] private float magDropSpeed = 2f;
     [SerializeField] private float magRiseSpeed = 3f;
 
@@ -29,29 +28,23 @@ public class Gun : MonoBehaviour
     private bool isReloading = false;
     private Vector3 magOriginalPosition;
 
+    // 샷 ID(중복 히트 방지용으로 쓰고 싶으면 증가시켜 사용)
+    private int shotSeq = 0;
+
     void Start()
     {
         currentAmmo = maxAmmo;
-
-        if (magTransform != null)
-        {
-            magOriginalPosition = magTransform.localPosition;
-        }
+        if (magTransform != null) magOriginalPosition = magTransform.localPosition;
     }
 
     void Update()
     {
+        if (isReloading) return;
 
-        if (isReloading)
-            return;
-
-        // 수동 재장전   
+        // 수동 재장전
         if (Input.GetKeyDown(reloadKey))
         {
-            if (currentAmmo < maxAmmo)
-            {
-                StartCoroutine(Reload());
-            }
+            if (currentAmmo < maxAmmo) StartCoroutine(Reload());
             return;
         }
 
@@ -62,12 +55,9 @@ public class Gun : MonoBehaviour
                 Fire();
                 nextFireTime = Time.time + fireRate;
             }
-            else
+            else if (autoReload)
             {
-                if (autoReload)
-                {
-                    StartCoroutine(Reload());
-                }
+                StartCoroutine(Reload());
             }
         }
     }
@@ -76,9 +66,18 @@ public class Gun : MonoBehaviour
     {
         if (bulletPrefab == null || firePoint == null) return;
 
-        GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+        var bulletGo = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
 
-        currentAmmo--; 
+        // 발사자/데미지 정보 주입
+        var b = bulletGo.GetComponent<Bullet>();
+        if (b != null)
+        {
+            b.shooterId = GetShooterId();
+            b.damage = 20f;
+            shotSeq++;
+        }
+
+        currentAmmo--;
 
         if (currentAmmo <= 0 && autoReload)
         {
@@ -89,9 +88,6 @@ public class Gun : MonoBehaviour
     IEnumerator Reload()
     {
         isReloading = true;
-
-        Debug.Log("재장전 시작...");
-
         if (magTransform != null)
         {
             Vector3 originalPos = magOriginalPosition;
@@ -99,30 +95,24 @@ public class Gun : MonoBehaviour
 
             float dropTime = 1f / magDropSpeed;
             float elapsed = 0f;
-
             while (elapsed < dropTime)
             {
                 elapsed += Time.deltaTime;
-                float t = elapsed / dropTime;
-                magTransform.localPosition = Vector3.Lerp(originalPos, dropPos, t);
+                magTransform.localPosition = Vector3.Lerp(originalPos, dropPos, elapsed / dropTime);
                 yield return null;
             }
-
             magTransform.localPosition = dropPos;
 
             yield return new WaitForSeconds(0.3f);
 
             float riseTime = 1f / magRiseSpeed;
             elapsed = 0f;
-
             while (elapsed < riseTime)
             {
                 elapsed += Time.deltaTime;
-                float t = elapsed / riseTime;
-                magTransform.localPosition = Vector3.Lerp(dropPos, originalPos, t);
+                magTransform.localPosition = Vector3.Lerp(dropPos, originalPos, elapsed / riseTime);
                 yield return null;
             }
-
             magTransform.localPosition = originalPos;
         }
         else
@@ -132,7 +122,11 @@ public class Gun : MonoBehaviour
 
         currentAmmo = maxAmmo;
         isReloading = false;
+    }
 
-        Debug.Log("재장전 완료!");
+    // 서버가 없어도 동작하도록 로컬 ID 반환
+    private int GetShooterId()
+    {
+        return 0;
     }
 }
