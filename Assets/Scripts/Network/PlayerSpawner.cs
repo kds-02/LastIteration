@@ -1,18 +1,17 @@
-using System.Collections;
-using System.Collections.Generic;
+using Fusion;
 using UnityEngine;
 
-public class PlayerSpawner : MonoBehaviour
+// 네트워크 방에 입장할 때 Player를 자동으로 스폰
+// NetworkRunnerHandler 오브젝트에 PlayerSpawner 스크립트 붙여 실현함
+public class PlayerSpawner : NetworkBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    [SerializeField] private GameObject playerPrefab;
 
-    // Update is called once per frame
-    void Update()
+    public override void Spawned()
     {
-        
+        if (Object.HasInputAuthority)
+        {
+            Runner.Spawn(playerPrefab, Vector3.zero, Quaternion.identity, Object.InputAuthority);
+        }
     }
 }
