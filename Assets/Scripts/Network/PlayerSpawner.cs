@@ -1,17 +1,28 @@
 using Fusion;
+using Fusion.Sockets;
 using UnityEngine;
 
-// 네트워크 방에 입장할 때 Player를 자동으로 스폰
-// NetworkRunnerHandler 오브젝트에 PlayerSpawner 스크립트 붙여 실현함
-public class PlayerSpawner : NetworkBehaviour
+public class PlayerSpawner : MonoBehaviour
 {
     [SerializeField] private GameObject playerPrefab;
+    private NetworkRunner _runner;
 
-    public override void Spawned()
+    // 네트워크 세션 시작 시 자동 호출됨
+    async void Start()
     {
-        if (Object.HasInputAuthority)
-        {
-            Runner.Spawn(playerPrefab, Vector3.zero, Quaternion.identity, Object.InputAuthority);
-        }
+        _runner = FindObjectOfType<NetworkRunner>();
+        _runner.ProvideInput = true;
+
+        // 스폰 타이밍 딜레이 (Runner 초기화 대기)
+        await System.Threading.Tasks.Task.Delay(1000);
+
+        // 네트워크 스폰
+        _runner.Spawn(playerPrefab, GetSpawnPoint(), Quaternion.identity, _runner.LocalPlayer);
+    }
+
+    private Vector3 GetSpawnPoint()
+    {
+        // 겹치지 않게 랜덤 위치
+        return new Vector3(Random.Range(-5f, 5f), 1f, Random.Range(-5f, 5f));
     }
 }
