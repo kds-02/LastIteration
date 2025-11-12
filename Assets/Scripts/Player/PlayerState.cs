@@ -1,12 +1,12 @@
-using System.Collections;
+using Fusion;
 using UnityEngine;
 
-public class PlayerState : MonoBehaviour
+public class PlayerState : NetworkBehaviour
 {
     [Header("Game State")]
     [SerializeField] private float hp = 100f;
     [SerializeField] private float maxHp = 100f;
-    [SerializeField] private float kill = 0f;   // ÃßÈÄ ¼­¹ö¿¡¼­ °ü¸®ÇÒ ¿¹Á¤
+    [SerializeField] private float kill = 0f;
     [SerializeField] private float death = 0f;
     [SerializeField] private bool isDead = false;
 
@@ -15,13 +15,13 @@ public class PlayerState : MonoBehaviour
 
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
-    private float respawnEndTime = -1f;   // »ç¸Á ½ÃÁ¡ + respawnDelay
+    private double respawnEndTime = -1;   // ë„¤íŠ¸ì›Œí¬ ê¸°ì¤€ ì‹œê°„ (Fusion SimulationTimeìœ¼ë¡œ ì„¤ì •)
 
     private Collider[] colliders;
     private Renderer[] renderers;
     private Rigidbody rb;
 
-    void Start()
+    public override void Spawned()
     {
         spawnPosition = transform.position;
         spawnRotation = transform.rotation;
@@ -31,7 +31,7 @@ public class PlayerState : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    // ¿ÜºÎ¿¡¼­ »óÅÂ È®ÀÎ
+    // ï¿½ÜºÎ¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½
     public bool IsDead() => isDead;
 
     public void TakeDamage(float damage, int attackerId)
@@ -58,53 +58,58 @@ public class PlayerState : MonoBehaviour
             rb.angularVelocity = Vector3.zero;
             rb.isKinematic = true;
         }
+
         SetAliveVisual(false);
 
-        //¸®½ºÆù Á¾·á ½Ã°¢ ±â·Ï
-        respawnEndTime = Time.time + respawnDelay;
-
-        StartCoroutine(RespawnAfterDelay());
+        // ë„¤íŠ¸ì›Œí¬ ì‹œê°„ ê¸°ì¤€ìœ¼ë¡œ ë¦¬ìŠ¤í° ì‹œì  ì„¤ì •
+        respawnEndTime = Runner.SimulationTime + respawnDelay;
     }
 
-    private IEnumerator RespawnAfterDelay()
+    public override void FixedUpdateNetwork()
     {
-        yield return new WaitForSeconds(respawnDelay);
-        Respawn();
+        // ë„¤íŠ¸ì›Œí¬ ì‹œê°„ ê¸°ì¤€ìœ¼ë¡œ ë¦¬ìŠ¤í° ì²˜ë¦¬
+        if (isDead && Runner.SimulationTime >= respawnEndTime)
+        {
+            Respawn();
+        }
     }
 
     private void Respawn()
     {
-        // À§Ä¡/È¸Àü ÃÊ±âÈ­
+        // ï¿½ï¿½Ä¡/È¸ï¿½ï¿½ ï¿½Ê±ï¿½È­
         transform.SetPositionAndRotation(spawnPosition, spawnRotation);
-
-        // Ã¼·Â º¹±¸
+        
+        // Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         hp = maxHp;
         isDead = false;
 
-        // ¹°¸®/Ãæµ¹/·»´õ º¹±¸
+        // ï¿½ï¿½ï¿½ï¿½/ï¿½æµ¹/ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (rb != null)
         {
             rb.isKinematic = false;
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
-        SetAliveVisual(true);
 
+        SetAliveVisual(true);
     }
 
     private void SetAliveVisual(bool alive)
     {
-        if (colliders != null) foreach (var c in colliders) c.enabled = alive;
-        if (renderers != null) foreach (var r in renderers) r.enabled = alive;
+        if (colliders != null)
+            foreach (var c in colliders) c.enabled = alive;
+        if (renderers != null)
+            foreach (var r in renderers) r.enabled = alive;
     }
 
     public float GetKill() => kill;
     public float GetDeath() => death;
 
-    // »ç¸Á ÁßÀÏ ¶§¸¸ ³²Àº ÃÊ ¹İÈ¯, »ıÁ¸ ÁßÀÌ¸é 0
+    // ë‚¨ì€ ë¦¬ìŠ¤í° ì‹œê°„ ê³„ì‚° (í™”ë©´ì— ì¶œë ¥)
+    // ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½È¯, ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¸ï¿½ 0
     public float GetRespawnRemaining()
     {
         if (!isDead) return 0f;
-        return Mathf.Max(0f, respawnEndTime - Time.time);
+        return Mathf.Max(0f, (float)(respawnEndTime - Runner.SimulationTime));
     }
 }
