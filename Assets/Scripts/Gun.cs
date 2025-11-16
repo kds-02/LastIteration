@@ -23,6 +23,10 @@ public class Gun : MonoBehaviour
     [SerializeField] private float magDropSpeed = 2f;
     [SerializeField] private float magRiseSpeed = 3f;
 
+    [Header("Camera Raycast")]
+    public Camera playerCamera; // 플레이어 카메라 할당
+    public float maxRayDistance = 100f;
+
     private int currentAmmo;
     private float nextFireTime = 0f;
     private bool isReloading = false;
@@ -35,6 +39,11 @@ public class Gun : MonoBehaviour
     {
         currentAmmo = maxAmmo;
         if (magTransform != null) magOriginalPosition = magTransform.localPosition;
+
+        if (playerCamera == null)
+        {
+            playerCamera = Camera.main;
+        }
     }
 
     void Update()
@@ -64,9 +73,26 @@ public class Gun : MonoBehaviour
 
     void Fire()
     {
-        if (bulletPrefab == null || firePoint == null) return;
+        if (bulletPrefab == null || firePoint == null || playerCamera == null) return;
 
-        var bulletGo = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        Vector3 targetPoint;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, maxRayDistance))
+        {
+            // 레이가 무언가에 맞았다면 그 지점을 타겟으로
+            targetPoint = hit.point;
+        }
+        else
+        {
+            // 아무것도 맞지 않았다면 레이 방향으로 최대 거리만큼의 지점
+            targetPoint = ray.GetPoint(maxRayDistance);
+        }
+
+        Vector3 direction = (targetPoint - firePoint.position).normalized;
+
+        var bulletGo = Instantiate(bulletPrefab, firePoint.position, Quaternion.LookRotation(direction));
+
 
         // 발사자/데미지 정보 주입
         var b = bulletGo.GetComponent<Bullet>();
