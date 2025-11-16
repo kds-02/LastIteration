@@ -6,7 +6,6 @@ public class CameraController : NetworkBehaviour
     [Header("FPS 카메라 설정")]
     public Transform cameraPivot;      // 플레이어 머리 위치
     public float mouseSensitivity = 2f;
-    public bool isAiming = false;
     public float minPitch = -70f;
     public float maxPitch = 80f;
 
@@ -14,6 +13,17 @@ public class CameraController : NetworkBehaviour
     private float pitch;
     private Camera cam;
     private PlayerMovement playerMovement;
+
+    [Header("조준 (ADS) 설정")]
+    public float normalFOV = 60f;
+    public float aimFOV = 40f;
+    public float aimLerpSpeed = 12f;
+
+    public Vector3 normalCamOffset = Vector3.zero;
+    public Vector3 aimCamOffset = new Vector3(0f, -0.05f, 0.07f);
+    public float aimMoveLerpSpeed = 10f;
+
+    public bool isAiming = false;
 
     public override void Spawned()
     {
@@ -30,6 +40,7 @@ public class CameraController : NetworkBehaviour
     void Start()
     {
         cam = GetComponent<Camera>();
+        cam.fieldOfView = normalFOV;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -42,8 +53,11 @@ public class CameraController : NetworkBehaviour
     {
         if (!Object.HasInputAuthority) return;
 
+        isAiming = Input.GetMouseButton(1);
+
         HandleMouseLook();
         HandleCameraPosition();
+        HandleAiming();
     }
 
     private void HandleMouseLook()
@@ -55,8 +69,6 @@ public class CameraController : NetworkBehaviour
         yaw += mouseX;
         pitch -= mouseY;
 
-        isAiming = Input.GetMouseButton(1);
-
         // 상하 회전 제한
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
 
@@ -64,13 +76,8 @@ public class CameraController : NetworkBehaviour
         transform.localRotation = Quaternion.Euler(pitch, 0, 0);
 
         // 플레이어 Yaw 회전
-        if (cameraPivot != null && cameraPivot.parent != null)
-        {
-            // cameraPivot.parent.rotation = Quaternion.Euler(0, yaw, 0);
-            if (playerMovement != null) {
-                // playerMovement.transform.rotation = Quaternion.Euler(0, yaw, 0);
-                cameraPivot.localRotation = Quaternion.Euler(0, yaw, 0);
-            }
+        if (cameraPivot != null) {
+            cameraPivot.localRotation = Quaternion.Euler(0, yaw, 0);
         }
     }
 
@@ -78,7 +85,30 @@ public class CameraController : NetworkBehaviour
     {
         if (cameraPivot == null) return;
 
+        // 조준 여부에 따라 Pivot에서 위치 오프셋 추가
+        Vector3 targetOffset = isAiming ? aimCamOffset : normalCamOffset;
+
+        Vector3 targetPos = cameraPivot.position + 
+                            cameraPivot.TransformVector(targetOffset);
+
         // FPS 카메라는 항상 머리 위치에서 갱신됨
-        transform.position = cameraPivot.position;
+        transform.position = Vector3.Lerp(
+            transform.position,
+            targetPos,
+            aimMoveLerpSpeed * Time.deltaTime
+        );
+    }
+
+    private void HandleAiming()
+    {
+        if (cam == null) return;
+
+        float targetFOV = isAiming ? aimFOV : normalFOV;
+
+        cam.fieldOfView = Mathf.Lerp(
+            cam.fieldOfView,
+            targetFOV,
+            aimLerpSpeed * Time.deltaTime
+        );
     }
 }
