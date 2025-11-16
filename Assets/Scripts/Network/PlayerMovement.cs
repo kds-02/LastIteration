@@ -30,6 +30,7 @@ public class PlayerMovement : NetworkBehaviour
     private bool isGrounded;              // 땅에 닿았는지
     private bool isCrouching;             // 앉은 상태인지
     private NetworkCharacterController netCC;
+    private CameraController localCam;
 
     // 네트워크로 스폰될 때 호출됨
     public override void Spawned()
@@ -50,12 +51,39 @@ public class PlayerMovement : NetworkBehaviour
     {
         yield return new WaitForSeconds(0.2f);
 
-        var cam = Camera.main?.GetComponent<CameraController>();
-        if (cam != null)
+        // 로컬 플레이어만 카메라 연결
+        if (!Object.HasInputAuthority)
+            yield break;
+        
+        Transform pivot = transform.Find("CameraPivot");
+
+        // CameraController가 생성/활성화될 때까지 계속 대기
+        while (localCam == null)
         {
-            cam.cameraPivot = transform.Find("CameraPivot");
-            Debug.Log("[Fusion] FPS 카메라 Pivot 연결 완료");
-        }
+            var camCtrl = GetComponentInChildren<CameraController>(true);
+            if (camCtrl != null)
+            {
+                camCtrl.cameraPivot = pivot;
+                localCam = camCtrl;
+                Debug.Log("[Fusion] FPS 카메라 Pivot 연결 완료");
+                yield break;
+            }
+
+        yield return null; // 다음 프레임에서 다시 탐색
+    }
+
+        // // Camera.main 제거 !!
+        // var camCtrl = GetComponentInChildren<CameraController>();
+        // if (camCtrl != null)
+        // {
+        //     camCtrl.cameraPivot = transform.Find("CameraPivot");
+        //     localCam = camCtrl;   // ⭐ 로컬 카메라 저장
+        //     Debug.Log("[Fusion] FPS 카메라 Pivot 연결 완료");
+        // }
+        // else
+        // {
+        //     Debug.LogError("[Fusion] CameraController를 찾지 못했습니다!");
+        // }
     }
 
     // Fusion의 FixedUpdateNetwork() — 네트워크 프레임마다 실행됨
@@ -71,6 +99,9 @@ public class PlayerMovement : NetworkBehaviour
     //   이동 처리
     private void HandleMovement(NetworkInputData data)
     {
+        if (localCam == null)
+        return; // 카메라 초기화 전에는 이동 처리 안 함
+        
         // --- 땅 체크 ---
         isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0)
@@ -91,7 +122,8 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         // --- 카메라 기준 이동 방향 계산 ---
-        Transform cam = Camera.main.transform;
+        // Transform cam = Camera.main.transform;
+        Transform cam = localCam.transform;
 
         Vector3 camForward = cam.forward;
         Vector3 camRight = cam.right;

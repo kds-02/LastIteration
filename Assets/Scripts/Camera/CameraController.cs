@@ -27,11 +27,25 @@ public class CameraController : NetworkBehaviour
 
     public override void Spawned()
     {
-        // 로컬 플레이어만 카메라 활성화
-        if (!Object.HasInputAuthority)
-        {
-            gameObject.SetActive(false);
-            enabled = false;
+        // // 로컬 플레이어만 카메라 활성화
+        // if (!Object.HasInputAuthority)
+        // {
+        //     gameObject.SetActive(false);
+        //     enabled = false;
+        // }
+
+        cam = GetComponent<Camera>();   // null 방지용 미리 선언
+        var audio = GetComponent<AudioListener>();
+
+
+        if (Object.HasInputAuthority) {
+            // 로컬 클라이언트 = 카메라만 활성화
+            cam.enabled = true;
+            if (audio) audio.enabled = true;
+        } else {
+            // 다른 플레이어 = 카메라 렌더만 끔, 오브젝트는 비활성화 시키지 않음
+            cam.enabled = false;
+            if (audio) audio.enabled = false;
         }
 
         playerMovement = GetComponentInParent<PlayerMovement>();
@@ -39,8 +53,14 @@ public class CameraController : NetworkBehaviour
 
     void Start()
     {
+        if (cam == null)
         cam = GetComponent<Camera>();
-        cam.fieldOfView = normalFOV;
+
+        if (cam != null) {
+            cam.fieldOfView = normalFOV;
+            Debug.Log("[CameraController] cam 초기화 완료");
+        }
+        
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -58,6 +78,12 @@ public class CameraController : NetworkBehaviour
         HandleMouseLook();
         HandleCameraPosition();
         HandleAiming();
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
     }
 
     private void HandleMouseLook()
