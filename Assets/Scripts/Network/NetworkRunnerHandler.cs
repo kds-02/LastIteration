@@ -57,10 +57,21 @@ public class NetworkRunnerHandler : MonoBehaviour
         var sceneRef = SceneRef.FromIndex(SceneManager.GetActiveScene().buildIndex);
         var appSettings = PhotonAppSettings.Global.AppSettings;
 
+        // 실행 모드 자동 결정
+        GameMode mode;
+
+#if UNITY_EDITOR
+        mode = GameMode.Host;     // ✦ 에디터에서는 무조건 Host
+        Debug.Log("▶ Editor 실행 → Host(서버) 모드");
+#else
+        mode = GameMode.Client;   // ✦ 빌드된 앱에서는 Client
+        Debug.Log("▶ Build 실행 → Client 모드");
+#endif       
         // 게임 실행 설정
         var startArgs = new StartGameArgs()
         {
-            GameMode = GameMode.AutoHostOrClient,
+            // GameMode = GameMode.AutoHostOrClient,
+            GameMode = mode,
             SessionName = "TestRoom",
             Scene = sceneRef,
             SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>(),

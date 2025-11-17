@@ -122,20 +122,28 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         // --- 카메라 기준 이동 방향 계산 ---
-        // Transform cam = Camera.main.transform;
         Transform cam = localCam.transform;
 
         Vector3 camForward = cam.forward;
         Vector3 camRight = cam.right;
-
         camForward.y = 0; camForward.Normalize();
         camRight.y = 0; camRight.Normalize();
 
         Vector3 inputDirection = camRight * data.moveInput.x + camForward * data.moveInput.y;
 
+        // float yaw = localCam.GetYaw();
+        // Quaternion yawRot = Quaternion.Euler(0, yaw, 0);
+
+        // Vector3 forward = yawRot * Vector3.forward;
+        // Vector3 right   = yawRot * Vector3.right;
+
+        // Vector3 inputDirection = right * data.moveInput.x + forward * data.moveInput.y;
+
+
         // --- 캐릭터 회전 (Yaw)(이동 방향 바라보기) ---
         float yaw = localCam.GetYaw();
         transform.rotation = Quaternion.Euler(0, yaw, 0);
+
         // if (inputDirection.magnitude > 0.1f)
         // {
         //     Quaternion targetRot = Quaternion.LookRotation(inputDirection);
@@ -176,6 +184,11 @@ public class PlayerMovement : NetworkBehaviour
         // --- 중력 적용 ---
         velocity.y += gravity * Runner.DeltaTime;
         controller.Move(velocity * Runner.DeltaTime);
+
+        // 서버(StateAuthority)가 controller 위치를 transform에 맞춰 동기화해야 다른 클라이언트에게 반영됨
+        if (Object.HasStateAuthority) {
+            transform.position = controller.transform.position;
+        }
     }
 
     //   애니메이션 처리
