@@ -27,12 +27,7 @@ public class CameraController : NetworkBehaviour
 
     public override void Spawned()
     {
-        // // 로컬 플레이어만 카메라 활성화
-        // if (!Object.HasInputAuthority)
-        // {
-        //     gameObject.SetActive(false);
-        //     enabled = false;
-        // }
+        Debug.Log("[CameraController] Spawned() 호출됨");
 
         cam = GetComponent<Camera>();   // null 방지용 미리 선언
         var audio = GetComponent<AudioListener>();
