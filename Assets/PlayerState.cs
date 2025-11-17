@@ -1,12 +1,12 @@
-using System.Collections;
+using Fusion;
 using UnityEngine;
 
-public class PlayerState : MonoBehaviour
+public class PlayerState : NetworkBehaviour
 {
     [Header("Game State")]
     [SerializeField] private float hp = 100f;
     [SerializeField] private float maxHp = 100f;
-    [SerializeField] private float kill = 0f;   // ���� �������� ������ ����
+    [SerializeField] private float kill = 0f;
     [SerializeField] private float death = 0f;
     [SerializeField] private bool isDead = false;
 
@@ -15,14 +15,13 @@ public class PlayerState : MonoBehaviour
 
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
-    private float respawnEndTime = -1f;   // ��� ���� + respawnDelay
-
+    private double respawnEndTime = -1;   // 네트워크 기준 시간 (Fusion SimulationTime으로 설정)
     private Collider[] colliders;
     private Renderer[] renderers;
     private Rigidbody rb;
     private Animator animator;
 
-    void Start()
+    public override void Spawned()
     {
         spawnPosition = transform.position;
         spawnRotation = transform.rotation;
@@ -82,16 +81,18 @@ public class PlayerState : MonoBehaviour
             foreach (var c in colliders) c.enabled = false;
         }
 
-        //������ ���� �ð� ���
-        respawnEndTime = Time.time + respawnDelay;
+        // 네트워크 시간 기준으로 리스폰 시점 설정
+        respawnEndTime = Runner.SimulationTime + respawnDelay;
 
-        StartCoroutine(RespawnAfterDelay());
     }
 
-    private IEnumerator RespawnAfterDelay()
+    public override void FixedUpdateNetwork()
     {
-        yield return new WaitForSeconds(respawnDelay);
-        Respawn();
+        // 네트워크 시간 기준으로 리스폰 처리
+        if (isDead && Runner.SimulationTime >= respawnEndTime)
+        {
+            Respawn();
+        }
     }
 
     private void Respawn()
@@ -122,8 +123,10 @@ public class PlayerState : MonoBehaviour
 
     private void SetAliveVisual(bool alive)
     {
-        if (colliders != null) foreach (var c in colliders) c.enabled = alive;
-        if (renderers != null) foreach (var r in renderers) r.enabled = alive;
+        if (colliders != null)
+            foreach (var c in colliders) c.enabled = alive;
+        if (renderers != null)
+            foreach (var r in renderers) r.enabled = alive;
     }
 
     public float GetKill() => kill;
@@ -133,6 +136,6 @@ public class PlayerState : MonoBehaviour
     public float GetRespawnRemaining()
     {
         if (!isDead) return 0f;
-        return Mathf.Max(0f, respawnEndTime - Time.time);
+        return Mathf.Max(0f, (float)(respawnEndTime - Runner.SimulationTime));
     }
 }
