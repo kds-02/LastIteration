@@ -7,7 +7,7 @@ public class Bullet : MonoBehaviour
 
     [Header("Combat")]
     public float damage = 34f;
-    public int shooterId = -1;  // Gun¿¡¼­ ¼¼ÆÃ
+    public int shooterId = -1;  // Gunì—ì„œ ì„¤ì •
 
     Rigidbody rb;
 
@@ -24,11 +24,11 @@ public class Bullet : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        // ÇÃ·¹ÀÌ¾î ¿©ºÎ Å½»ö(ÀÚ½Ä Äİ¶óÀÌ´õ °í·Á)
+        // í”Œë ˆì´ì–´ ìƒíƒœ íƒì§€ (ìì‹ ì½œë¼ì´ë” ëŒ€ì‘)
         var state = collision.collider.GetComponentInParent<PlayerState>();
-        if (state != null && !state.IsDead())
+        if (state != null && !state.IsDead)
         {
-            state.TakeDamage(damage, shooterId);
+            state.RPC_TakeDamage(damage, shooterId);
         }
 
         Destroy(gameObject);

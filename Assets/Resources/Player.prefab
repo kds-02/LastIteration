@@ -1292,8 +1292,8 @@ MonoBehaviour:
   Animator: {fileID: 4566050352643166851}
   ApplyTiming: 2
   SyncSettings: 79
-  StateHashes: 000000006bd5a32d398fdc0420e23b685928a8ce2ef6da876d58e98496e4e18312c7376cef60ae4904a326b43aed0ef4d12e8609
-  TriggerHashes: 00000000
+  StateHashes: 000000006bd5a32d398fdc0420e23b685928a8ce2ef6da876d58e98496e4e18312c7376cef60ae4904a326b43aed0ef4d12e86092afa8626a8b5caa3
+  TriggerHashes: 0000000037b93501
   TotalWords: 4
 --- !u!143 &3355375950170735726
 CharacterController:
@@ -1354,11 +1354,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8633c22bbe71b19478380d89b5f47e44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hp: 100
-  maxHp: 100
-  kill: 0
-  death: 0
-  isDead: 0
+  _Hp: 100
+  _MaxHp: 100
+  _Kill: 0
+  _Death: 0
+  _IsDead:
+    _value: 0
   respawnDelay: 3
 --- !u!114 &6794141259112587770
 MonoBehaviour:

@@ -3,16 +3,16 @@ using UnityEngine.UI;
 
 public class HUDKillDeathUI : MonoBehaviour
 {
-    private PlayerState player;       // ÀÚµ¿À¸·Î Ã£À» ÇÃ·¹ÀÌ¾î »óÅÂ
-    private Text kdText;              // K/D Ç¥½Ã¿ë
-    private Text respawnText;         // ¸®½ºÆù ½Ã°£ Ç¥½Ã¿ë
+    private PlayerState player;       // ìë™ìœ¼ë¡œ ì°¾ì„ í”Œë ˆì´ì–´ ìƒíƒœ
+    private Text kdText;              // K/D í‘œì‹œìš©
+    private Text respawnText;         // ë¦¬ìŠ¤í° ì‹œê°„ í‘œì‹œìš©
 
     void Start()
     {
-        // PlayerState ÀÚµ¿ Å½»ö
+        // PlayerState ìë™ íƒìƒ‰
         player = FindObjectOfType<PlayerState>();
 
-        // ÀÚ½Ä Text ÄÄÆ÷³ÍÆ®¸¦ ÀÚµ¿À¸·Î Å½»ö
+        // ìì‹ Text ì»´í¬ë„ŒíŠ¸ë¥¼ ìë™ìœ¼ë¡œ íƒìƒ‰
         Text[] texts = GetComponentsInChildren<Text>(true);
         foreach (var t in texts)
         {
@@ -22,7 +22,7 @@ public class HUDKillDeathUI : MonoBehaviour
                 respawnText = t;
         }
 
-        // ÃÊ±âÈ­
+        // ì´ˆê¸°í™”
         if (kdText != null) kdText.text = "K 0 / D 0";
         if (respawnText != null)
         {
@@ -35,16 +35,16 @@ public class HUDKillDeathUI : MonoBehaviour
     {
         if (player == null) return;
 
-        // --- K/D °»½Å ---
+        // --- K/D ì—…ë°ì´íŠ¸ ---
         if (kdText != null)
         {
             kdText.text = $"K {player.GetKill():0} / D {player.GetDeath():0}";
         }
 
-        // --- »ç¸Á ½Ã ¸®½ºÆù ³²Àº ½Ã°£ ---
+        // --- ì‚¬ë§ ì‹œ ë¦¬ìŠ¤í° ë‚¨ì€ ì‹œê°„ ---
         if (respawnText != null)
         {
-            if (player.IsDead())
+            if (player.IsDead)
             {
                 float remain = Mathf.Ceil(player.GetRespawnRemaining());
                 respawnText.enabled = true;
