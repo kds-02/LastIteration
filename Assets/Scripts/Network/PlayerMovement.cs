@@ -29,14 +29,14 @@ public class PlayerMovement : NetworkBehaviour
 
     private bool isGrounded;              // 땅에 닿았는지
     private bool isCrouching;             // 앉은 상태인지
-    private NetworkCharacterController netCC;
+    // private NetworkCharacterController netCC;
     private CameraController localCam;
 
     // 네트워크로 스폰될 때 호출됨
     public override void Spawned()
     {
         controller = GetComponent<CharacterController>();
-        netCC = GetComponent<NetworkCharacterController>();
+        // netCC = GetComponent<NetworkCharacterController>();
         animator = GetComponent<Animator>();
 
         standingHeight = controller.height;
@@ -101,7 +101,7 @@ public class PlayerMovement : NetworkBehaviour
     {
         if (localCam == null)
         return; // 카메라 초기화 전에는 이동 처리 안 함
-        
+
         // --- 땅 체크 ---
         isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0)
@@ -133,7 +133,9 @@ public class PlayerMovement : NetworkBehaviour
 
         Vector3 inputDirection = camRight * data.moveInput.x + camForward * data.moveInput.y;
 
-        // --- 캐릭터 회전 (이동 방향 바라보기) ---
+        // --- 캐릭터 회전 (Yaw)(이동 방향 바라보기) ---
+        float yaw = localCam.GetYaw();
+        transform.rotation = Quaternion.Euler(0, yaw, 0);
         // if (inputDirection.magnitude > 0.1f)
         // {
         //     Quaternion targetRot = Quaternion.LookRotation(inputDirection);

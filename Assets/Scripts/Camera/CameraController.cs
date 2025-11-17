@@ -24,6 +24,7 @@ public class CameraController : NetworkBehaviour
     public float aimMoveLerpSpeed = 10f;
 
     public bool isAiming = false;
+    public float GetYaw() => yaw;
 
     public override void Spawned()
     {
@@ -96,10 +97,10 @@ public class CameraController : NetworkBehaviour
         // 카메라 회전 적용 (Pitch만)
         transform.localRotation = Quaternion.Euler(pitch, 0, 0);
 
-        // 플레이어 Yaw 회전
-        if (cameraPivot != null) {
-            cameraPivot.localRotation = Quaternion.Euler(0, yaw, 0);
-        }
+        // 플레이어 Yaw 회전 -> PlayerMovement로 위임
+        // if (cameraPivot != null) {
+        //     cameraPivot.localRotation = Quaternion.Euler(0, yaw, 0);
+        // }
     }
 
     private void HandleCameraPosition()
