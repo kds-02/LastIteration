@@ -8,4 +8,5 @@ public struct NetworkInputData : INetworkInput
     public bool jumpPressed;    // 점프 눌림
     public bool runHeld;        // 달리기(Shift) 누르고 있는 중
     public bool crouchHeld;     // 앉기(Ctrl) 누르고 있는 중
+    public float mouseDeltaX;   // 마우스 X 입력 (Yaw 회전용)
 }
