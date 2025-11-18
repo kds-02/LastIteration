@@ -23,7 +23,7 @@ public class HUDKillDeathUI : MonoBehaviour
         }
 
         // 초기화
-        if (kdText != null) kdText.text = "K 0 / D 0";
+        if (kdText != null) kdText.text = "0          0";
         if (respawnText != null)
         {
             respawnText.text = "";
