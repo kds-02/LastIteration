@@ -29,14 +29,15 @@ public class PlayerMovement : NetworkBehaviour
 
     private bool isGrounded;              // 땅에 닿았는지
     private bool isCrouching;             // 앉은 상태인지
-    // private NetworkCharacterController netCC;
+    
     private CameraController localCam;
+
+    [Networked] public float NetworkYaw { get; set; } // 네트워크 회전값 추가
 
     // 네트워크로 스폰될 때 호출됨
     public override void Spawned()
     {
         controller = GetComponent<CharacterController>();
-        // netCC = GetComponent<NetworkCharacterController>();
         animator = GetComponent<Animator>();
 
         standingHeight = controller.height;
@@ -46,10 +47,10 @@ public class PlayerMovement : NetworkBehaviour
             StartCoroutine(SetupCamera());
     }
 
-    // 카메라 연결 지연 처리 (Fusion 초기화 완료 기다림)
+    // 카메라 연결
     private IEnumerator SetupCamera()
     {
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(0.2f); // 지연 처리 (Fusion 초기화 완료 기다림)
 
         // 로컬 플레이어만 카메라 연결
         if (!Object.HasInputAuthority)
@@ -57,8 +58,12 @@ public class PlayerMovement : NetworkBehaviour
         
         Transform pivot = transform.Find("CameraPivot");
 
-        // CameraController가 생성/활성화될 때까지 계속 대기
-        while (localCam == null)
+        // 최대 10초간 대기 (무한 루프 방지)
+        float timeout = 10f;
+        float elapsed = 0f;
+
+        // CameraController가 생성/활성화될 때까지 대기
+        while (localCam == null && elapsed < timeout)
         {
             var camCtrl = GetComponentInChildren<CameraController>(true);
             if (camCtrl != null)
@@ -69,38 +74,32 @@ public class PlayerMovement : NetworkBehaviour
                 yield break;
             }
 
-        yield return null; // 다음 프레임에서 다시 탐색
+            yield return null;
+            elapsed += Time.deltaTime;
+        }
+
+        if (localCam == null)
+        {
+            Debug.LogError("[Fusion] CameraController 연결 실패 (Timeout)");
+        }
     }
 
-        // // Camera.main 제거 !!
-        // var camCtrl = GetComponentInChildren<CameraController>();
-        // if (camCtrl != null)
-        // {
-        //     camCtrl.cameraPivot = transform.Find("CameraPivot");
-        //     localCam = camCtrl;   // ⭐ 로컬 카메라 저장
-        //     Debug.Log("[Fusion] FPS 카메라 Pivot 연결 완료");
-        // }
-        // else
-        // {
-        //     Debug.LogError("[Fusion] CameraController를 찾지 못했습니다!");
-        // }
-    }
-
-    // Fusion의 FixedUpdateNetwork() — 네트워크 프레임마다 실행됨
-    public override void FixedUpdateNetwork()
+    public override void FixedUpdateNetwork() // 네트워크 프레임마다 실행됨
     {
         if (!GetInput(out NetworkInputData data))
             return;
 
+        // 움직임/애니메이션 네트워크 입력 동기화
         HandleMovement(data);
-        HandleAnimation();
+        HandleAnimation(data);
     }
 
     //   이동 처리
     private void HandleMovement(NetworkInputData data)
     {
-        if (localCam == null)
-        return; // 카메라 초기화 전에는 이동 처리 안 함
+        // 로컬 플레이어만 카메라 기준으로 이동
+        // if (localCam == null)
+        // return;
 
         // --- 땅 체크 ---
         isGrounded = controller.isGrounded;
@@ -122,33 +121,41 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         // --- 카메라 기준 이동 방향 계산 ---
-        Transform cam = localCam.transform;
+        Vector3 inputDirection;
 
-        Vector3 camForward = cam.forward;
-        Vector3 camRight = cam.right;
-        camForward.y = 0; camForward.Normalize();
-        camRight.y = 0; camRight.Normalize();
+        // 로컬 플레이어: 카메라 기준 이동
+        if (Object.HasInputAuthority && localCam != null) 
+        {
+            Transform cam = localCam.transform;
+            Vector3 camForward = cam.forward;
+            Vector3 camRight = cam.right;
+            camForward.y = 0; camForward.Normalize();
+            camRight.y = 0; camRight.Normalize();
 
-        Vector3 inputDirection = camRight * data.moveInput.x + camForward * data.moveInput.y;
+            inputDirection = camRight * data.moveInput.x + camForward * data.moveInput.y;
 
-        // float yaw = localCam.GetYaw();
-        // Quaternion yawRot = Quaternion.Euler(0, yaw, 0);
+            // Yaw 값을 네트워크에 저장
+            NetworkYaw = localCam.GetYaw();
+        
+        // 원격 플레이어: 네트워크 Yaw 기준 이동
+        } else {  
+            Quaternion yawRot = Quaternion.Euler(0, NetworkYaw, 0);
+            Vector3 forward = yawRot * Vector3.forward;
+            Vector3 right = yawRot * Vector3.right;
 
-        // Vector3 forward = yawRot * Vector3.forward;
-        // Vector3 right   = yawRot * Vector3.right;
-
-        // Vector3 inputDirection = right * data.moveInput.x + forward * data.moveInput.y;
-
+            inputDirection = right * data.moveInput.x + forward * data.moveInput.y;
+        }
 
         // --- 캐릭터 회전 (Yaw)(이동 방향 바라보기) ---
-        float yaw = localCam.GetYaw();
-        transform.rotation = Quaternion.Euler(0, yaw, 0);
 
-        // if (inputDirection.magnitude > 0.1f)
-        // {
-        //     Quaternion targetRot = Quaternion.LookRotation(inputDirection);
-        //     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 10f * Runner.DeltaTime);
-        // }
+        // 로컬 플레이어
+        if (Object.HasInputAuthority && localCam != null) {
+            transform.rotation = Quaternion.Euler(0, localCam.GetYaw(), 0);
+        
+        // 원격 플레이어는 네트워크 Yaw 사용
+        } else {
+            transform.rotation = Quaternion.Euler(0, NetworkYaw, 0);
+        }
 
         // --- 이동 속도 결정 (걷기 / 뛰기 / 앉기) ---
         float targetSpeed =
@@ -163,9 +170,7 @@ public class PlayerMovement : NetworkBehaviour
         {
             float factor = inputDirection.magnitude > 0 ? acceleration : deceleration;
             currentMoveVelocity = Vector3.Lerp(currentMoveVelocity, targetVelocity, factor * Runner.DeltaTime);
-        }
-        else
-        {
+        } else {
             // 공중에서 이동 입력이 있을 때만 제어
             if (inputDirection.magnitude > 0)
             {
@@ -185,14 +190,16 @@ public class PlayerMovement : NetworkBehaviour
         velocity.y += gravity * Runner.DeltaTime;
         controller.Move(velocity * Runner.DeltaTime);
 
-        // 서버(StateAuthority)가 controller 위치를 transform에 맞춰 동기화해야 다른 클라이언트에게 반영됨
-        if (Object.HasStateAuthority) {
-            transform.position = controller.transform.position;
-        }
+
+        // NetworkTransform이 자동으로 위치 동기화하므로 제거
+            // 서버(StateAuthority)가 controller 위치를 transform에 맞춰 동기화해야 다른 클라이언트에게 반영됨
+            // if (Object.HasStateAuthority) {
+            //     transform.position = controller.transform.position;
+            // }
     }
 
     //   애니메이션 처리
-    private void HandleAnimation()
+    private void HandleAnimation(NetworkInputData data)
     {
         if (animator == null) return;
 
@@ -201,13 +208,12 @@ public class PlayerMovement : NetworkBehaviour
 
         animator.SetFloat("Horizontal", localVel.x);
         animator.SetFloat("Vertical", localVel.z);
-
         animator.SetBool("IsGrounded", isGrounded);
         animator.SetBool("IsCrouching", isCrouching);
         animator.SetBool("IsJumping", !isGrounded);
 
         // Speed(걷기/뛰기 전환값) — 로컬 플레이어에게만 적용
-        float speedParam = Object.HasInputAuthority && Input.GetKey(KeyCode.LeftShift) ? 1f : 0f;
+        float speedParam = data.runHeld ? 1f : 0f;
         animator.SetFloat("Speed", speedParam);
     }
 }

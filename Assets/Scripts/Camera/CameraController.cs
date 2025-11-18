@@ -38,6 +38,13 @@ public class CameraController : NetworkBehaviour
             // 로컬 클라이언트 = 카메라만 활성화
             cam.enabled = true;
             if (audio) audio.enabled = true;
+
+            gameObject.tag = "MainCamera"; // 로컬 플레이어 카메라에 MainCamera 태그 설정
+            
+            // FOV 초기화
+            cam.fieldOfView = normalFOV;
+            Debug.Log("[CameraController] cam 초기화 완료");
+
         } else {
             // 다른 플레이어 = 카메라 렌더만 끔, 오브젝트는 비활성화 시키지 않음
             cam.enabled = false;
@@ -49,17 +56,11 @@ public class CameraController : NetworkBehaviour
 
     void Start()
     {
-        if (cam == null)
-        cam = GetComponent<Camera>();
-
-        if (cam != null) {
-            cam.fieldOfView = normalFOV;
-            Debug.Log("[CameraController] cam 초기화 완료");
+        if (Object.HasInputAuthority) // InputAuthority가 있는 경우만 커서 설정
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
-        
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
 
         if (cameraPivot == null)
             Debug.LogError("[CameraController] cameraPivot이 연결되지 않았습니다!");
@@ -98,9 +99,9 @@ public class CameraController : NetworkBehaviour
         transform.localRotation = Quaternion.Euler(pitch, 0, 0);
 
         // 플레이어 Yaw 회전 -> PlayerMovement로 위임
-        // if (cameraPivot != null) {
-        //     cameraPivot.localRotation = Quaternion.Euler(0, yaw, 0);
-        // }
+            // if (cameraPivot != null) {
+            //     cameraPivot.localRotation = Quaternion.Euler(0, yaw, 0);
+            // }
     }
 
     private void HandleCameraPosition()
@@ -109,9 +110,7 @@ public class CameraController : NetworkBehaviour
 
         // 조준 여부에 따라 Pivot에서 위치 오프셋 추가
         Vector3 targetOffset = isAiming ? aimCamOffset : normalCamOffset;
-
-        Vector3 targetPos = cameraPivot.position + 
-                            cameraPivot.TransformVector(targetOffset);
+        Vector3 targetPos = cameraPivot.position + cameraPivot.TransformVector(targetOffset);
 
         // FPS 카메라는 항상 머리 위치에서 갱신됨
         transform.position = Vector3.Lerp(
