@@ -13,7 +13,6 @@ public class PlayerState : NetworkBehaviour
     [Header("Respawn Settings")]
     [SerializeField] private float respawnDelay = 3f;
 
-    // ★ 리스폰 가장자리 길이 (x, z 절댓값 14)
     [Header("Respawn Area")]
     [SerializeField] private float respawnEdge = 14f;
 
@@ -38,17 +37,25 @@ public class PlayerState : NetworkBehaviour
         characterController = GetComponent<CharacterController>();
     }
 
-    // ★ 테스트용: L 키 눌러서 강제로 죽어보기
+    // ------- 입력 테스트(L, K) ------- //
     private void Update()
     {
         // 입력 권한 있는 로컬 클라이언트만
         if (!Object.HasInputAuthority) return;
         if (IsDead) return;
 
+        // L: 강제 즉사
         if (Input.GetKeyDown(KeyCode.L))
         {
-            // 공격자 ID는 테스트라 -1 넣어둠
+            Debug.Log("[PlayerState] L key pressed → instant death test");
             RPC_TakeDamage(9999f, -1);
+        }
+
+        // K: 10 데미지
+        if (Input.GetKeyDown(KeyCode.K))
+        {
+            Debug.Log("[PlayerState] K key pressed → 10 damage test");
+            RPC_TakeDamage(10f, -1);
         }
     }
 
@@ -60,12 +67,16 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    // ★ 입력 권한 클라 → StateAuthority(서버) 로만 보내도록 변경
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     public void RPC_TakeDamage(float damage, int attackerId)
     {
         if (IsDead) return;
 
+        // 서버에서 실제 HP 감소
+        float before = Hp;
         Hp -= Mathf.Max(0f, damage);
+        Debug.Log($"[PlayerState] RPC_TakeDamage on StateAuthority: {before} -> {Hp}");
 
         if (Hp <= 0f)
         {
@@ -76,6 +87,8 @@ public class PlayerState : NetworkBehaviour
     private void Die(int attackerId)
     {
         if (!Object.HasStateAuthority || IsDead) return;
+
+        Debug.Log("[PlayerState] Die() called");
 
         IsDead = true;
         Death += 1f;
@@ -116,10 +129,7 @@ public class PlayerState : NetworkBehaviour
     {
         if (!Object.HasStateAuthority) return;
 
-        // ★ 가장자리 사각형 위의 랜덤 위치
         Vector3 respawnPos = GetRandomEdgePosition();
-
-        // ★ (0,0,0)을 바라보는 회전값
         Quaternion respawnRot = GetLookAtCenterRotation(respawnPos);
 
         Hp = MaxHp;
@@ -176,17 +186,12 @@ public class PlayerState : NetworkBehaviour
     public float GetHp() => Hp;
     public float GetMaxHp() => MaxHp;
 
-    // ★ 가장자리 사각형(네 변) 위의 랜덤 위치 계산
-    //   x, z 절댓값이 최대 14가 되도록 설정
     private Vector3 GetRandomEdgePosition()
     {
         float edge = respawnEdge;
-        float y = transform.position.y; // y는 현재 높이 유지 (원하면 따로 SerializeField로 빼도 됨)
+        float y = transform.position.y;
 
-        // -edge ~ edge 구간 중 하나
         float t = Random.Range(-edge, edge);
-
-        // 0: +x변, 1: -x변, 2: +z변, 3: -z변
         int side = Random.Range(0, 4);
 
         float x = 0f;
@@ -194,38 +199,22 @@ public class PlayerState : NetworkBehaviour
 
         switch (side)
         {
-            case 0: // x = +edge, z는 -edge~edge
-                x = edge;
-                z = t;
-                break;
-            case 1: // x = -edge
-                x = -edge;
-                z = t;
-                break;
-            case 2: // z = +edge
-                z = edge;
-                x = t;
-                break;
-            case 3: // z = -edge
-                z = -edge;
-                x = t;
-                break;
+            case 0: x = edge; z = t; break;
+            case 1: x = -edge; z = t; break;
+            case 2: z = edge; x = t; break;
+            case 3: z = -edge; x = t; break;
         }
 
         return new Vector3(x, y, z);
     }
 
-    // ★ 주어진 위치에서 (0,0,0)을 바라보는 회전값
     private Quaternion GetLookAtCenterRotation(Vector3 position)
     {
-        Vector3 dir = Vector3.zero - position; // 중심 - 내 위치
-        dir.y = 0f;                            // 위/아래는 무시하고 수평만 보게
+        Vector3 dir = Vector3.zero - position;
+        dir.y = 0f;
 
         if (dir.sqrMagnitude < 0.0001f)
-        {
-            // 혹시 (0,0,0)에 너무 가까우면 기본 방향
             dir = Vector3.forward;
-        }
 
         return Quaternion.LookRotation(dir.normalized, Vector3.up);
     }
