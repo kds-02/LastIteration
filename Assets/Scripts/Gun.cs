@@ -23,6 +23,13 @@ public class Gun : MonoBehaviour
     [SerializeField] private float magDropSpeed = 2f;
     [SerializeField] private float magRiseSpeed = 3f;
 
+    [Header("Fire Effect & Sound")]
+    //public ParticleSystem muzzleFlash; // 총구 화염 이펙트
+    public AudioSource audioSource; // 오디오 소스
+    public AudioClip fireSound; // 발사 사운드
+    [Range(0f, 1f)]
+    public float fireSoundVolume = 0.5f; // 사운드 볼륨
+
     [Header("Camera Raycast")]
     public Camera playerCamera; // 플레이어 카메라 할당
     public float maxRayDistance = 100f;
@@ -46,6 +53,10 @@ public class Gun : MonoBehaviour
         if (playerCamera == null)
         {
             playerCamera = Camera.main;
+        }
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
         }
     }
 
@@ -80,6 +91,11 @@ public class Gun : MonoBehaviour
 
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         Vector3 targetPoint;
+
+        if (audioSource != null && fireSound != null)
+        {
+            audioSource.PlayOneShot(fireSound, fireSoundVolume);
+        }
 
         if (Physics.Raycast(ray, out RaycastHit hit, maxRayDistance))
         {

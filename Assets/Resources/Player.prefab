@@ -1314,8 +1314,8 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
+  m_Height: 1.8
+  m_Radius: 0.4
   m_SlopeLimit: 45
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
@@ -1361,6 +1361,7 @@ MonoBehaviour:
   _IsDead:
     _value: 0
   respawnDelay: 3
+  respawnEdge: 14
 --- !u!114 &6794141259112587770
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1383,6 +1384,7 @@ MonoBehaviour:
   airControl: 5
   standingHeight: 2
   crouchingHeight: 1
+  _NetworkYaw: 0
 --- !u!1 &4516490304729852230
 GameObject:
   m_ObjectHideFlags: 0
