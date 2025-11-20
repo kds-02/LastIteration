@@ -51,5 +51,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "LastIteration2.sln"
+    "dotnet.defaultSolution": "LastIteration.sln"
 }

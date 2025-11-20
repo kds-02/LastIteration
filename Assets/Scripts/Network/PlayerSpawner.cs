@@ -11,16 +11,6 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     // 플레이어가 룸에 입장했을 때 호출됨
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-        // // 로컬 플레이어만 직접 스폰
-        // if (runner.LocalPlayer == player)
-        // {
-        //     Debug.Log("[Fusion] 로컬 플레이어 랜덤 위치 스폰");
-        //     Vector3 spawnPos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 1f, UnityEngine.Random.Range(-5f, 5f));
-
-        //     runner.Spawn(playerPrefab, spawnPos, Quaternion.identity, player);
-        //     Debug.Log($"[Fusion] Player spawned: {player} (로컬)");
-        // }
-
         if (runner.IsServer) {
             Debug.Log("[Fusion] 서버가 플레이어 스폰");
             Vector3 spawnPos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 1f, UnityEngine.Random.Range(-5f, 5f));
@@ -48,6 +38,8 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         data.jumpPressed = Input.GetKeyDown(KeyCode.Space); //  점프 입력
         data.runHeld = Input.GetKey(KeyCode.LeftShift); //  달리기 입력
         data.crouchHeld = Input.GetKey(KeyCode.LeftControl); //  앉기 입력
+        data.mouseDeltaX = Input.GetAxisRaw("Mouse X"); // 마우스 X 회전 입력
+
         input.Set(data);
     }
 

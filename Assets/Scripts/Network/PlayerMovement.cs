@@ -29,14 +29,13 @@ public class PlayerMovement : NetworkBehaviour
 
     private bool isGrounded;              // 땅에 닿았는지
     private bool isCrouching;             // 앉은 상태인지
-    
+
     private CameraController localCam;
 
-    private bool debugAfterRespawn = false;
-    private int debugFramesRemaining = 0;
-    private int freezeTicksAfterRespawn = 0;
+    [Networked] public float NetworkYaw { get; set; } // 네트워크 회전값
 
-    [Networked] public float NetworkYaw { get; set; } // 네트워크 회전값 추가
+    // 리스폰 직후 이동 잠깐 막기용
+    private int freezeTicksAfterRespawn = 0;
 
     // 네트워크로 스폰될 때 호출됨
     public override void Spawned()
@@ -51,13 +50,6 @@ public class PlayerMovement : NetworkBehaviour
             StartCoroutine(SetupCamera());
     }
 
-    // PlayerState에서 부활 직후 호출할 함수
-    public void DebugLogAfterRespawn()
-    {
-        debugAfterRespawn = true;
-        debugFramesRemaining = 5; // 부활 후 5프레임만 로그 찍기
-    }
-
     // 카메라 연결
     private IEnumerator SetupCamera()
     {
@@ -66,7 +58,7 @@ public class PlayerMovement : NetworkBehaviour
         // 로컬 플레이어만 카메라 연결
         if (!Object.HasInputAuthority)
             yield break;
-        
+
         Transform pivot = transform.Find("CameraPivot");
 
         // 최대 10초간 대기 (무한 루프 방지)
@@ -95,14 +87,9 @@ public class PlayerMovement : NetworkBehaviour
         }
     }
 
-    public void OnRespawnFreeze(int ticks = 1)
+    public override void FixedUpdateNetwork() // 네트워크 프레임마다 실행됨
     {
-        // 여러 번 호출되면 더 긴 값 유지
-        freezeTicksAfterRespawn = Mathf.Max(freezeTicksAfterRespawn, ticks);
-    }
-
-    public override void FixedUpdateNetwork()
-    {
+        // ★ 먼저 죽었으면 이동/애니메이션 전부 스킵
         var state = GetComponent<PlayerState>();
         if (state != null && state.IsDead)
             return;
@@ -112,30 +99,38 @@ public class PlayerMovement : NetworkBehaviour
         {
             freezeTicksAfterRespawn--;
 
-            // 속도도 깔끔하게 0으로
+            // 안전하게 속도도 0으로
             currentMoveVelocity = Vector3.zero;
             velocity = Vector3.zero;
+
+            // 애니메이션도 멈춘 상태로 두고 싶으면 여기서 바로 return
             return;
         }
 
         if (!GetInput(out NetworkInputData data))
             return;
 
-        HandleMovement(data);
+        // 서버만 이동 계산
+        if (Object.HasStateAuthority)
+        {
+            HandleMovementServer(data);
+        }
+
+        // 애니메이션은 모두 공통으로
         HandleAnimation(data);
     }
 
-    //   이동 처리
-    private void HandleMovement(NetworkInputData data)
+    // 서버 권위 이동 함수
+    private void HandleMovementServer(NetworkInputData data)
     {
-        // 로컬 플레이어만 카메라 기준으로 이동
-        // if (localCam == null)
-        // return;
+        // --- 서버에서 Yaw 업데이트 (마우스X입력값 사용) ---
+        NetworkYaw += data.mouseDeltaX * 2f; // 회전 감도
+        transform.rotation = Quaternion.Euler(0, NetworkYaw, 0);
 
         // --- 땅 체크 ---
         isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0)
-            velocity.y = -2f;  // 땅을 붙잡는 용도
+            velocity.y = -2f; // 땅을 붙잡는 용도
 
         // --- 앉기 처리 ---
         if (data.crouchHeld && !isCrouching)
@@ -151,44 +146,15 @@ public class PlayerMovement : NetworkBehaviour
             controller.center = new Vector3(0, standingHeight / 2, 0);
         }
 
-        // --- 카메라 기준 이동 방향 계산 ---
-        Vector3 inputDirection;
+        // --- 이동 방향 (서버 기준 yaw) ---
+        Vector3 forward = transform.forward;
+        Vector3 right   = transform.right;
 
-        // 로컬 플레이어: 카메라 기준 이동
-        if (Object.HasInputAuthority && localCam != null) 
-        {
-            Transform cam = localCam.transform;
-            Vector3 camForward = cam.forward;
-            Vector3 camRight = cam.right;
-            camForward.y = 0; camForward.Normalize();
-            camRight.y = 0; camRight.Normalize();
+        Vector3 inputDirection =
+            right * data.moveInput.x +
+            forward * data.moveInput.y;
 
-            inputDirection = camRight * data.moveInput.x + camForward * data.moveInput.y;
-
-            // Yaw 값을 네트워크에 저장
-            NetworkYaw = localCam.GetYaw();
-        
-        // 원격 플레이어: 네트워크 Yaw 기준 이동
-        } else {  
-            Quaternion yawRot = Quaternion.Euler(0, NetworkYaw, 0);
-            Vector3 forward = yawRot * Vector3.forward;
-            Vector3 right = yawRot * Vector3.right;
-
-            inputDirection = right * data.moveInput.x + forward * data.moveInput.y;
-        }
-
-        // --- 캐릭터 회전 (Yaw)(이동 방향 바라보기) ---
-
-        // 로컬 플레이어
-        if (Object.HasInputAuthority && localCam != null) {
-            transform.rotation = Quaternion.Euler(0, localCam.GetYaw(), 0);
-        
-        // 원격 플레이어는 네트워크 Yaw 사용
-        } else {
-            transform.rotation = Quaternion.Euler(0, NetworkYaw, 0);
-        }
-
-        // --- 이동 속도 결정 (걷기 / 뛰기 / 앉기) ---
+        // --- 이동 속도 ---
         float targetSpeed =
             isCrouching ? crouchSpeed :
             data.runHeld ? runSpeed :
@@ -196,44 +162,32 @@ public class PlayerMovement : NetworkBehaviour
 
         Vector3 targetVelocity = inputDirection * targetSpeed;
 
-        // --- 가속/감속 적용 ---
+        // --- 가속/감속 ---
         if (isGrounded)
         {
             float factor = inputDirection.magnitude > 0 ? acceleration : deceleration;
             currentMoveVelocity = Vector3.Lerp(currentMoveVelocity, targetVelocity, factor * Runner.DeltaTime);
-        } else {
-            // 공중에서 이동 입력이 있을 때만 제어
+        }
+        else
+        {
             if (inputDirection.magnitude > 0)
-            {
-                currentMoveVelocity =
-                    Vector3.Lerp(currentMoveVelocity, targetVelocity, airControl * Runner.DeltaTime);
-            }
+                currentMoveVelocity = Vector3.Lerp(currentMoveVelocity, targetVelocity, airControl * Runner.DeltaTime);
         }
 
-        // 실제 이동 적용
-        controller.Move(currentMoveVelocity * Runner.DeltaTime);
-
-        // --- 점프 처리 ---
+        // --- 점프 ---
         if (data.jumpPressed && isGrounded && !isCrouching)
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
 
-        // --- 중력 적용 ---
+        // --- 중력 ---
         velocity.y += gravity * Runner.DeltaTime;
-        controller.Move(velocity * Runner.DeltaTime);
 
+        // --- 최종 이동 ---
+        controller.Move((currentMoveVelocity + new Vector3(0, velocity.y, 0)) * Runner.DeltaTime);
 
-        // NetworkTransform이 자동으로 위치 동기화하므로 제거
-            // 서버(StateAuthority)가 controller 위치를 transform에 맞춰 동기화해야 다른 클라이언트에게 반영됨
-            // if (Object.HasStateAuthority) {
-            //     transform.position = controller.transform.position;
-            // }
+        // transform.position은 NetworkTransform이 자동으로 싱크됨
     }
 
-    public void ResetMovementState() { 
-        velocity = Vector3.zero; currentMoveVelocity = Vector3.zero; 
-    }
-
-    //   애니메이션 처리
+    // 애니메이션 처리
     private void HandleAnimation(NetworkInputData data)
     {
         if (animator == null) return;
@@ -247,8 +201,23 @@ public class PlayerMovement : NetworkBehaviour
         animator.SetBool("IsCrouching", isCrouching);
         animator.SetBool("IsJumping", !isGrounded);
 
-        // Speed(걷기/뛰기 전환값) — 로컬 플레이어에게만 적용
+        // Speed(걷기/뛰기 전환값)
         float speedParam = data.runHeld ? 1f : 0f;
         animator.SetFloat("Speed", speedParam);
+    }
+
+    // ▼ Respawn 시 PlayerState에서 호출하는 함수들 ▼
+
+    // 속도/중력 상태 초기화
+    public void ResetMovementState()
+    {
+        currentMoveVelocity = Vector3.zero;
+        velocity = Vector3.zero;
+    }
+
+    // 리스폰 후 n틱 동안 이동 막기
+    public void OnRespawnFreeze(int ticks = 1)
+    {
+        freezeTicksAfterRespawn = Mathf.Max(freezeTicksAfterRespawn, ticks);
     }
 }
