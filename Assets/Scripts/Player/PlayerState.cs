@@ -72,8 +72,8 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    // ★ 입력 권한 클라 → StateAuthority(서버) 로만 보내도록 변경
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     public void RPC_TakeDamage(float damage, int attackerId)
     {
         if (IsDead) return;
