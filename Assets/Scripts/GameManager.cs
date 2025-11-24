@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -43,21 +44,12 @@ public class GameManager : NetworkBehaviour
                 // 킬 제한 달성 시 즉시 종료
                 if (topPlayer != null && topPlayer.GetKill() >= KillLimit)
                 {
-                    GameEnded = true;
-                    RPC_EndGame(topPlayer.Object.InputAuthority.RawEncoded, topPlayer.GetKill(), topPlayer.GetDeath(), true);
+                    EndGame(topPlayer, true);
                 }
                 // 타이머가 끝났다면 종료 처리
                 else if (Runner.SimulationTime >= GameEndTime)
                 {
-                    GameEnded = true;
-                    if (topPlayer != null)
-                    {
-                        RPC_EndGame(topPlayer.Object.InputAuthority.RawEncoded, topPlayer.GetKill(), topPlayer.GetDeath(), false);
-                    }
-                    else
-                    {
-                        RPC_EndGame(-1, 0f, 0f, false);
-                    }
+                    EndGame(topPlayer, false);
                 }
             }
         }
@@ -96,18 +88,36 @@ public class GameManager : NetworkBehaviour
         timeText.text = $"{min:0}:{sec:00}";
     }
 
+    private void EndGame(PlayerState topPlayer, bool killLimitReached)
+    {
+        GameEnded = true;
+
+        var (reason, winnerLine) = BuildEndMessage(topPlayer, killLimitReached);
+        RPC_EndGame(reason, winnerLine);
+    }
+
+    private (string reason, string winnerLine) BuildEndMessage(PlayerState topPlayer, bool killLimitReached)
+    {
+        string reason = killLimitReached ? "Kill limit reached" : "Time is up";
+        string winnerLine = "Winner: N/A";
+
+        if (topPlayer != null)
+        {
+            string winnerName = ResolvePlayerName(topPlayer);
+            winnerLine = $"Winner: {winnerName} (K:{topPlayer.GetKill():0} / D:{topPlayer.GetDeath():0})";
+        }
+
+        return (reason, winnerLine);
+    }
+
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_EndGame(int winnerRawId, float winnerKill, float winnerDeath, bool killLimitReached)
+    private void RPC_EndGame(string reason, string winnerLine)
     {
         Debug.Log("[GameManager] 게임 종료 - EndScene 로드");
+        EndGameResult.Set(reason, winnerLine);
         if (endgameText != null)
         {
-            string winnerName = ResolvePlayerName(winnerRawId);
-            string reason = killLimitReached ? "Kill limit reached" : "Time is up";
-            string winnerLine = winnerRawId >= 0
-                ? $"Winner: {winnerName} (K:{winnerKill:0} / D:{winnerDeath:0})"
-                : "Winner: N/A";
-            endgameText.text = $"End Game!\n{reason}\n{winnerLine}";
+            endgameText.text = EndGameResult.GetCombinedMessage();
         }
         SceneManager.LoadScene("EndScene");
     }
@@ -116,15 +126,8 @@ public class GameManager : NetworkBehaviour
     {
         PlayerState topPlayer = null;
 
-        foreach (var player in Runner.ActivePlayers)
+        foreach (var state in EnumeratePlayerStates())
         {
-            if (!Runner.TryGetPlayerObject(player, out var playerObject))
-                continue;
-
-            var state = playerObject.GetComponent<PlayerState>();
-            if (state == null)
-                continue;
-
             if (topPlayer == null)
             {
                 topPlayer = state;
@@ -144,14 +147,53 @@ public class GameManager : NetworkBehaviour
         return topPlayer;
     }
 
-    private string ResolvePlayerName(int winnerRawId)
+    private IEnumerable<PlayerState> EnumeratePlayerStates()
     {
+        bool anyFromRunner = false;
+
         foreach (var player in Runner.ActivePlayers)
         {
-            if (player.RawEncoded == winnerRawId)
-                return player.ToString();
+            if (!Runner.TryGetPlayerObject(player, out var playerObject))
+                continue;
+
+            var state = playerObject.GetComponent<PlayerState>();
+            if (state == null)
+                continue;
+
+            anyFromRunner = true;
+            yield return state;
         }
 
-        return winnerRawId >= 0 ? $"Player {winnerRawId}" : "Unknown";
+        // 방금 종료 시점에 Runner.ActivePlayers가 비어 있거나
+        // PlayerObject -> PlayerState 연결이 안 되어 있다면 씬 내 모든 PlayerState를 한 번 더 훑는다.
+        if (!anyFromRunner)
+        {
+            foreach (var state in FindObjectsOfType<PlayerState>())
+            {
+                yield return state;
+            }
+        }
+    }
+
+    private string ResolvePlayerName(PlayerState state)
+    {
+        if (state == null)
+            return "Unknown";
+
+        if (state.Object != null)
+        {
+            var authority = state.Object.InputAuthority;
+
+            foreach (var player in Runner.ActivePlayers)
+            {
+                if (player == authority)
+                    return player.ToString();
+            }
+
+            if (authority != PlayerRef.None)
+                return authority.ToString();
+        }
+
+        return state.name;
     }
 }
