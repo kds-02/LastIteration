@@ -758,7 +758,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1879123619005927633}
   m_Layer: 0
-  m_Name: shotpoint
+  m_Name: FirePoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -856,6 +856,7 @@ MonoBehaviour:
   hitEffectPrefab: {fileID: 100002, guid: 56bfc2f4b4a0c534c8ef3d0fd1124c44, type: 3}
   reloadSound: {fileID: 8300000, guid: 2d99c9ea0cc09a442be1064bdb24c701, type: 3}
   reloadSoundVolume: 0.5
+  ammoText: {fileID: 0}
 --- !u!82 &1753854373435688186
 AudioSource:
   m_ObjectHideFlags: 0

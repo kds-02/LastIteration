@@ -4,12 +4,12 @@ public class Bullet : MonoBehaviour
 {
     public float speed = 20f;
     public float lifetime = 3f;
-
     [Header("Combat")]
     public float damage = 34f;
-    public int shooterId = -1;  // Gun에서 설정
+    public int shooterId = -1;
 
-    Rigidbody rb;
+    private Rigidbody rb;
+    private bool velocitySet = false;
 
     void Awake()
     {
@@ -19,7 +19,17 @@ public class Bullet : MonoBehaviour
     void OnEnable()
     {
         Destroy(gameObject, lifetime);
-        if (rb != null) rb.velocity = transform.forward * speed;
+    }
+
+    void Start()
+    {
+        // OnEnable 대신 Start에서 velocity 설정
+        if (rb != null && !velocitySet)
+        {
+            rb.velocity = transform.forward * speed;
+            velocitySet = true;
+            Debug.Log($"[Bullet] Velocity set: {rb.velocity}, forward: {transform.forward}");
+        }
     }
 
     void OnCollisionEnter(Collision collision)
@@ -34,7 +44,13 @@ public class Bullet : MonoBehaviour
 
     private void HandleHit(Collider target)
     {
-        // 우선 히트박스가 있다면 멀티플라이어 적용
+        // ✅ 총알끼리 충돌 무시 (컴포넌트로만 체크)
+        if (target.GetComponent<Bullet>() != null)
+        {
+            Debug.Log("[Bullet] Ignored bullet-to-bullet collision");
+            return;
+        }
+
         var hitbox = target.GetComponent<PlayerHitbox>() ?? target.GetComponentInParent<PlayerHitbox>();
         if (hitbox != null)
         {
@@ -43,13 +59,11 @@ public class Bullet : MonoBehaviour
             return;
         }
 
-        // 히트박스가 없으면 기존 플레이어 상태를 직접 찾음
         var state = target.GetComponentInParent<PlayerState>();
         if (state != null && !state.IsDead)
         {
             state.RPC_TakeDamage(damage, shooterId);
         }
-
         Destroy(gameObject);
     }
 }
