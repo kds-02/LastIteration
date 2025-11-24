@@ -7,9 +7,17 @@ public class HUDKillDeathUI : MonoBehaviour
     private PlayerState player;   // 로컬 플레이어의 PlayerState
     private Text kdText;          // K/D 표시용
     private Text respawnText;     // 리스폰 시간 표시용
+    private RawImage killIcon;    // 킬 아이콘
+    private RawImage deathIcon;   // 데스 아이콘
 
     void Start()
     {
+        // 자식 Canvas가 비활성화된 경우 HUD가 안 보일 수 있으므로 강제로 켜둔다
+        var canvas = GetComponentInParent<Canvas>(true);
+        if (canvas != null && !canvas.gameObject.activeSelf)
+            canvas.gameObject.SetActive(true);
+
+
         // 자식 Text 컴포넌트를 자동으로 탐색
         Text[] texts = GetComponentsInChildren<Text>(true);
         foreach (var t in texts)
@@ -19,6 +27,29 @@ public class HUDKillDeathUI : MonoBehaviour
                 kdText = t;
             else if (nameLower.Contains("respawn"))
                 respawnText = t;
+        }
+
+        // 자식 RawImage 아이콘도 자동으로 탐색하고 활성화
+        RawImage[] images = GetComponentsInChildren<RawImage>(true);
+        foreach (var img in images)
+        {
+            var nameLower = img.name.ToLower();
+            if (nameLower.Contains("kill") && killIcon == null)
+                killIcon = img;
+            else if (nameLower.Contains("death") && deathIcon == null)
+                deathIcon = img;
+        }
+
+        if (killIcon != null)
+        {
+            killIcon.enabled = true;
+            killIcon.gameObject.SetActive(true);
+        }
+
+        if (deathIcon != null)
+        {
+            deathIcon.enabled = true;
+            deathIcon.gameObject.SetActive(true);
         }
 
         // 초기화
