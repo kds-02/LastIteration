@@ -4,21 +4,21 @@ using Fusion;
 
 public class Gun : MonoBehaviour
 {
-    [Header("총알 설정")]
+    [Header("�Ѿ� ����")]
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
 
-    [Header("발사 설정")]
+    [Header("�߻� ����")]
     [SerializeField] private float fireRate = 0.5f;
     [SerializeField] private KeyCode fireKey = KeyCode.Mouse0;
 
-    [Header("장전 설정")]
+    [Header("źâ ����")]
     [SerializeField] private int maxAmmo = 10;
     [SerializeField] private float reloadTime = 2f;
     [SerializeField] private bool autoReload = true;
     [SerializeField] private KeyCode reloadKey = KeyCode.R;
 
-    [Header("탄창 애니메이션")]
+    [Header("������ �ִϸ��̼�")]
     [SerializeField] private Transform magTransform;
     [SerializeField] private float magDropDistance = 0.5f;
     [SerializeField] private float magDropSpeed = 2f;
@@ -65,11 +65,11 @@ public class Gun : MonoBehaviour
     {
         var netObj = GetComponentInParent<NetworkObject>();
         if (netObj != null && !netObj.HasInputAuthority)
-            return; // 프록시에서 입력 처리/총알 생성 방지
+            return; // ?�록?�에???�력 처리/총알 ?�성 방�?
 
         if (isReloading) return;
 
-        // 수동 장전
+        // ?�동 ?�전
         if (Input.GetKeyDown(reloadKey))
         {
             if (currentAmmo < maxAmmo) StartCoroutine(Reload());
@@ -118,7 +118,7 @@ public class Gun : MonoBehaviour
         Vector3 direction = (targetPoint - firePoint.position).normalized;
         var bulletGo = Instantiate(bulletPrefab, firePoint.position, Quaternion.LookRotation(direction));
 
-        // 발사자/데미지 설정
+        // 발사???��?지 ?�정
         var b = bulletGo.GetComponent<Bullet>();
         if (b != null)
         {
@@ -186,7 +186,7 @@ public class Gun : MonoBehaviour
         isReloading = false;
     }
 
-    // 공격자 식별: PlayerRef.RawEncoded 사용 (없으면 -1)
+    // 공격???�별: PlayerRef.RawEncoded ?�용 (?�으�?-1)
     private int GetShooterId()
     {
         var netObj = GetComponentInParent<NetworkObject>();

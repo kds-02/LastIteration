@@ -4,23 +4,23 @@ using Fusion;
 
 public class Shotgun : MonoBehaviour
 {
-    [Header("총알 설정")]
+    [Header("�Ѿ� ����")]
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
 
-    [Header("산탄 설정")]
-    [SerializeField] private int pelletsPerShot = 8;         // 한 번에 발사되는 탄환 수
-    [SerializeField] private float spreadAngle = 15f;        // 산탄 퍼짐 각도
+    [Header("���� �߻� ����")]
+    [SerializeField] private int pelletsPerShot = 8;         // ??번에 발사?�는 ?�환 ??
+    [SerializeField] private float spreadAngle = 15f;        // ?�탄 ?�짐 각도
     [SerializeField] private float fireRate = 0.5f;
     [SerializeField] private KeyCode fireKey = KeyCode.Mouse0;
 
-    [Header("장전 설정")]
+    [Header("źâ ����")]
     [SerializeField] private int maxAmmo = 10;
     [SerializeField] private float reloadTime = 2f;
     [SerializeField] private bool autoReload = true;
     [SerializeField] private KeyCode reloadKey = KeyCode.R;
 
-    [Header("탄창 애니메이션")]
+    [Header("������ �ִϸ��̼�")]
     [SerializeField] private Transform magTransform;
     [SerializeField] private float magDropDistance = 0.5f;
     [SerializeField] private float magDropSpeed = 2f;
@@ -65,11 +65,11 @@ public class Shotgun : MonoBehaviour
     {
         var netObj = GetComponentInParent<NetworkObject>();
         if (netObj != null && !netObj.HasInputAuthority)
-            return; // 프록시에서는 입력/발사 처리 안 함
+            return; // ?�록?�에?�는 ?�력/발사 처리 ????
 
         if (isReloading) return;
 
-        // 수동 장전
+        // ?�동 ?�전
         if (Input.GetKeyDown(reloadKey))
         {
             if (currentAmmo < maxAmmo) StartCoroutine(Reload());
@@ -97,7 +97,7 @@ public class Shotgun : MonoBehaviour
         if (audioSource != null && fireSound != null)
             audioSource.PlayOneShot(fireSound, fireSoundVolume);
 
-        // 카메라 중앙을 기준으로 조준점 산출
+        // 카메??중앙??기�??�로 조�????�출
         Ray centerRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         Vector3 centerTarget;
 
@@ -106,7 +106,7 @@ public class Shotgun : MonoBehaviour
         else
             centerTarget = centerRay.GetPoint(maxRayDistance);
 
-        // 여러 발 산탄 발사
+        // ?�러 �??�탄 발사
         for (int i = 0; i < pelletsPerShot; i++)
         {
             FireSinglePellet(centerTarget);
@@ -122,7 +122,7 @@ public class Shotgun : MonoBehaviour
     {
         Vector3 direction = (centerTarget - firePoint.position).normalized;
 
-        // 퍼짐을 랜덤으로 추가
+        // ?�짐???�덤?�로 추�?
         Vector3 spread = new Vector3(
             Random.Range(-spreadAngle, spreadAngle),
             Random.Range(-spreadAngle, spreadAngle),
@@ -142,7 +142,7 @@ public class Shotgun : MonoBehaviour
 
         var bulletGo = Instantiate(bulletPrefab, firePoint.position, Quaternion.LookRotation(direction));
 
-        // 발사자/데미지 설정
+        // 발사???��?지 ?�정
         var b = bulletGo.GetComponent<Bullet>();
         if (b != null)
         {
@@ -199,7 +199,7 @@ public class Shotgun : MonoBehaviour
         isReloading = false;
     }
 
-    // 공격자 식별: PlayerRef.RawEncoded 사용 (없으면 -1)
+    // 공격???�별: PlayerRef.RawEncoded ?�용 (?�으�?-1)
     private int GetShooterId()
     {
         var netObj = GetComponentInParent<NetworkObject>();
