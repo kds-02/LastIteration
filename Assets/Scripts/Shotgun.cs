@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Fusion;
+using UnityEngine.UI;
 
 public class Shotgun : MonoBehaviour
 {
@@ -44,6 +45,7 @@ public class Shotgun : MonoBehaviour
     public float reloadSoundVolume = 0.5f;
 
     private int currentAmmo;
+    public Text ammoText;
     private float nextFireTime = 0f;
     private bool isReloading = false;
     private Vector3 magOriginalPosition;
@@ -59,6 +61,13 @@ public class Shotgun : MonoBehaviour
 
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
+
+        if (ammoText == null)
+        {
+            ammoText = GameObject.Find("AmmoText")?.GetComponent<Text>();
+        }
+
+        UpdateAmmoUI();
     }
 
     void Update()
@@ -113,6 +122,7 @@ public class Shotgun : MonoBehaviour
         }
 
         currentAmmo--;
+        UpdateAmmoUI();
 
         if (currentAmmo <= 0 && autoReload)
             StartCoroutine(Reload());
@@ -196,7 +206,30 @@ public class Shotgun : MonoBehaviour
         }
 
         currentAmmo = maxAmmo;
+        UpdateAmmoUI();
         isReloading = false;
+    }
+
+    private void UpdateAmmoUI()
+    {
+        if (ammoText != null)
+        {
+            ammoText.text = $"{currentAmmo} / {maxAmmo}";
+
+            // ÃÑ¾ËÀÌ ¾øÀ» ¶§ »¡°£»öÀ¸·Î Ç¥½Ã (¼±ÅÃ»çÇ×)
+            if (currentAmmo == 0)
+            {
+                ammoText.color = Color.red;
+            }
+            else if (currentAmmo <= maxAmmo / 3)
+            {
+                ammoText.color = Color.yellow;
+            }
+            else
+            {
+                ammoText.color = Color.white;
+            }
+        }
     }
 
     // ê³µê²©???ë³„: PlayerRef.RawEncoded ?¬ìš© (?†ìœ¼ë©?-1)
