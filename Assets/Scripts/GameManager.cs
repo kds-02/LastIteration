@@ -41,7 +41,13 @@ public class GameManager : NetworkBehaviour
             }
         }
 
-        // 로컬 UI 업데이트 (권한과 무관)
+        // 로컬 UI 업데이트 (권한과 무관) - Authority일 때도 한 번 실행
+        UpdateUITimer();
+    }
+
+    // Proxy에서도 UI가 갱신되도록 Render 훅에서 다시 호출
+    public override void Render()
+    {
         UpdateUITimer();
     }
 
