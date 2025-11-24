@@ -37,6 +37,11 @@ public class Gun : MonoBehaviour
     [Header("Hit Effect")]
     public GameObject hitEffectPrefab;
 
+    [Header("Reload Sound")]
+    public AudioClip reloadSound;
+    [Range(0f, 1f)]
+    public float reloadSoundVolume = 0.5f;
+
     private int currentAmmo;
     private float nextFireTime = 0f;
     private bool isReloading = false;
@@ -138,6 +143,19 @@ public class Gun : MonoBehaviour
     IEnumerator Reload()
     {
         isReloading = true;
+
+        // 재장전 사운드 재생 (디버그 추가)
+        Debug.Log("재장전 시작!");
+        if (audioSource != null && reloadSound != null)
+        {
+            Debug.Log("재장전 사운드 재생!");
+            audioSource.PlayOneShot(reloadSound, reloadSoundVolume);
+        }
+        else
+        {
+            Debug.LogWarning($"AudioSource: {audioSource != null}, ReloadSound: {reloadSound != null}");
+        }
+
         if (magTransform != null)
         {
             Vector3 originalPos = magOriginalPosition;

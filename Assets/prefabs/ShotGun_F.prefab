@@ -849,11 +849,13 @@ MonoBehaviour:
   magDropSpeed: 2
   magRiseSpeed: 3
   audioSource: {fileID: 1753854373435688186}
-  fireSound: {fileID: 8300000, guid: 7f5b841303578d149bee9eb1ba2d2933, type: 3}
+  fireSound: {fileID: 8300000, guid: 68898693814ed294ebbf9154e90e35d2, type: 3}
   fireSoundVolume: 0.5
   playerCamera: {fileID: 0}
   maxRayDistance: 100
   hitEffectPrefab: {fileID: 100002, guid: 56bfc2f4b4a0c534c8ef3d0fd1124c44, type: 3}
+  reloadSound: {fileID: 8300000, guid: 2d99c9ea0cc09a442be1064bdb24c701, type: 3}
+  reloadSoundVolume: 0.5
 --- !u!82 &1753854373435688186
 AudioSource:
   m_ObjectHideFlags: 0
@@ -864,7 +866,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7f5b841303578d149bee9eb1ba2d2933, type: 3}
+  m_audioClip: {fileID: 8300000, guid: 68898693814ed294ebbf9154e90e35d2, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1

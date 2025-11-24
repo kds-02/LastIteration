@@ -767,6 +767,8 @@ MonoBehaviour:
   playerCamera: {fileID: 0}
   maxRayDistance: 100
   hitEffectPrefab: {fileID: 100014, guid: 5332791ebce075d4a9e56f4581e7fb47, type: 3}
+  reloadSound: {fileID: 8300000, guid: 53c96774c27ded5498d2afc332219bb2, type: 3}
+  reloadSoundVolume: 0.5
 --- !u!82 &466966258522943510
 AudioSource:
   m_ObjectHideFlags: 0
