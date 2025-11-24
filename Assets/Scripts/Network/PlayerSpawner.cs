@@ -7,22 +7,46 @@ using UnityEngine;
 public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
     [SerializeField] private GameObject playerPrefab;
+    private readonly Dictionary<PlayerRef, NetworkObject> spawnedPlayers = new Dictionary<PlayerRef, NetworkObject>();
 
     // 플레이어가 룸에 입장했을 때 호출됨
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
         if (runner.IsServer) {
             Debug.Log("[Fusion] 서버가 플레이어 스폰");
+
+            // 이미 스폰되어 있으면 중복 생성 방지
+            if (spawnedPlayers.ContainsKey(player))
+            {
+                Debug.LogWarning($"[Fusion] Player {player} already spawned, skip duplicate.");
+                return;
+            }
+
             Vector3 spawnPos = new Vector3(UnityEngine.Random.Range(-5f, 5f), 1f, UnityEngine.Random.Range(-5f, 5f));
 
-            runner.Spawn(playerPrefab, spawnPos, Quaternion.identity, player);
-            Debug.Log($"[Fusion] Player spawned: {player} (로컬)");
+            var obj = runner.Spawn(playerPrefab, spawnPos, Quaternion.identity, player);
+            spawnedPlayers[player] = obj;
+            runner.SetPlayerObject(player, obj);
+            Debug.Log($"[Fusion] Player spawned: {player} (loyalty: server)");
         }
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
         Debug.Log($"[Fusion] Player left: {player} 나감");
+        // 서버가 해당 플레이어의 오브젝트 정리
+        if (runner.IsServer && spawnedPlayers.TryGetValue(player, out var obj))
+        {
+            if (obj != null && obj.IsValid)
+            {
+                runner.Despawn(obj);
+            }
+            spawnedPlayers.Remove(player);
+        }
+
+        // PlayerObject 매핑 해제
+        if (runner.IsServer)
+            runner.SetPlayerObject(player, null);
     }
 
     // 클라이언트의 입력을 Fusion 네트워크로 전달
@@ -62,6 +86,6 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
     public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress)
     {
-        throw new NotImplementedException();
+        // 사용 안 함
     }
 }

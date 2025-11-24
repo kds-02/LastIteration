@@ -1,25 +1,26 @@
 using System.Collections;
 using UnityEngine;
+using Fusion;
 
 public class Shotgun : MonoBehaviour
 {
-    [Header("ÃÑ¾Ë ¼³Á¤")]
+    [Header("ì´ì•Œ ì„¤ì •")]
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
 
-    [Header("¼¦°Ç ¹ß»ç ¼³Á¤")]
-    [SerializeField] private int pelletsPerShot = 8; // ÇÑ ¹ø¿¡ ¹ß»çµÇ´Â ÃÑ¾Ë °³¼ö
-    [SerializeField] private float spreadAngle = 15f; // ÃÑ¾Ë ÆÛÁö´Â °¢µµ
+    [Header("ì‚°íƒ„ ì„¤ì •")]
+    [SerializeField] private int pelletsPerShot = 8;         // í•œ ë²ˆì— ë°œì‚¬ë˜ëŠ” íƒ„í™˜ ìˆ˜
+    [SerializeField] private float spreadAngle = 15f;        // ì‚°íƒ„ í¼ì§ ê°ë„
     [SerializeField] private float fireRate = 0.5f;
     [SerializeField] private KeyCode fireKey = KeyCode.Mouse0;
 
-    [Header("ÅºÃ¢ ¼³Á¤")]
+    [Header("ì¥ì „ ì„¤ì •")]
     [SerializeField] private int maxAmmo = 10;
     [SerializeField] private float reloadTime = 2f;
     [SerializeField] private bool autoReload = true;
     [SerializeField] private KeyCode reloadKey = KeyCode.R;
 
-    [Header("ÀçÀåÀü ¾Ö´Ï¸ŞÀÌ¼Ç")]
+    [Header("íƒ„ì°½ ì• ë‹ˆë©”ì´ì…˜")]
     [SerializeField] private Transform magTransform;
     [SerializeField] private float magDropDistance = 0.5f;
     [SerializeField] private float magDropSpeed = 2f;
@@ -28,8 +29,7 @@ public class Shotgun : MonoBehaviour
     [Header("Fire Effect & Sound")]
     public AudioSource audioSource;
     public AudioClip fireSound;
-    [Range(0f, 1f)]
-    public float fireSoundVolume = 0.5f;
+    [Range(0f, 1f)] public float fireSoundVolume = 0.5f;
 
     [Header("Camera Raycast")]
     public Camera playerCamera;
@@ -50,20 +50,21 @@ public class Shotgun : MonoBehaviour
         if (magTransform != null) magOriginalPosition = magTransform.localPosition;
 
         if (playerCamera == null)
-        {
             playerCamera = Camera.main;
-        }
+
         if (audioSource == null)
-        {
             audioSource = GetComponent<AudioSource>();
-        }
     }
 
     void Update()
     {
+        var netObj = GetComponentInParent<NetworkObject>();
+        if (netObj != null && !netObj.HasInputAuthority)
+            return; // í”„ë¡ì‹œì—ì„œëŠ” ì…ë ¥/ë°œì‚¬ ì²˜ë¦¬ ì•ˆ í•¨
+
         if (isReloading) return;
 
-        // ¼öµ¿ ÀçÀåÀü
+        // ìˆ˜ë™ ì¥ì „
         if (Input.GetKeyDown(reloadKey))
         {
             if (currentAmmo < maxAmmo) StartCoroutine(Reload());
@@ -88,26 +89,19 @@ public class Shotgun : MonoBehaviour
     {
         if (bulletPrefab == null || firePoint == null || playerCamera == null) return;
 
-        // »ç¿îµå´Â ÇÑ ¹ø¸¸ Àç»ı
         if (audioSource != null && fireSound != null)
-        {
             audioSource.PlayOneShot(fireSound, fireSoundVolume);
-        }
 
-        // Ä«¸Ş¶ó Áß¾Ó ·¹ÀÌ (±âÁØÁ¡)
+        // ì¹´ë©”ë¼ ì¤‘ì•™ì„ ê¸°ì¤€ìœ¼ë¡œ ì¡°ì¤€ì  ì‚°ì¶œ
         Ray centerRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         Vector3 centerTarget;
 
         if (Physics.Raycast(centerRay, out RaycastHit centerHit, maxRayDistance))
-        {
             centerTarget = centerHit.point;
-        }
         else
-        {
             centerTarget = centerRay.GetPoint(maxRayDistance);
-        }
 
-        // ¿©·¯ ¹ßÀÇ ÃÑ¾Ë ¹ß»ç
+        // ì—¬ëŸ¬ ë°œ ì‚°íƒ„ ë°œì‚¬
         for (int i = 0; i < pelletsPerShot; i++)
         {
             FireSinglePellet(centerTarget);
@@ -116,32 +110,24 @@ public class Shotgun : MonoBehaviour
         currentAmmo--;
 
         if (currentAmmo <= 0 && autoReload)
-        {
             StartCoroutine(Reload());
-        }
     }
 
     void FireSinglePellet(Vector3 centerTarget)
     {
-        // Gun°ú µ¿ÀÏÇÏ°Ô: firePoint¿¡¼­ Å¸°ÙÀ¸·ÎÀÇ ¹æÇâ
         Vector3 direction = (centerTarget - firePoint.position).normalized;
 
-        // ½ºÇÁ·¹µå¸¦ ¹æÇâ º¤ÅÍ¿¡ Á÷Á¢ Ãß°¡
+        // í¼ì§ì„ ëœë¤ìœ¼ë¡œ ì¶”ê°€
         Vector3 spread = new Vector3(
             Random.Range(-spreadAngle, spreadAngle),
             Random.Range(-spreadAngle, spreadAngle),
             0f
         );
-
-        // ¹æÇâ¿¡ ½ºÇÁ·¹µå °¢µµ¸¦ ´õÇÑ ÈÄ Á¤±ÔÈ­
         direction = Quaternion.Euler(spread) * direction;
 
-        // ½ºÇÁ·¹µå°¡ Àû¿ëµÈ ¹æÇâÀ¸·Î ·¹ÀÌÄ³½ºÆ®
         Ray spreadRay = new Ray(firePoint.position, direction);
-
         if (Physics.Raycast(spreadRay, out RaycastHit hit, maxRayDistance))
         {
-            // È÷Æ® ÀÌÆåÆ® »ı¼º
             if (hitEffectPrefab != null)
             {
                 GameObject effect = Instantiate(hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
@@ -149,15 +135,15 @@ public class Shotgun : MonoBehaviour
             }
         }
 
-        // Gun°ú ¿ÏÀüÈ÷ µ¿ÀÏÇÑ ¹æ½ÄÀ¸·Î ÃÑ¾Ë »ı¼º
         var bulletGo = Instantiate(bulletPrefab, firePoint.position, Quaternion.LookRotation(direction));
 
-        // ¹ß»çÀÚ/µ¥¹ÌÁö Á¤º¸ ÁÖÀÔ
+        // ë°œì‚¬ì/ë°ë¯¸ì§€ ì„¤ì •
         var b = bulletGo.GetComponent<Bullet>();
         if (b != null)
         {
             b.shooterId = GetShooterId();
             b.damage = 20f;
+            Debug.Log($"[Shotgun] Fire shooterId={b.shooterId}");
             shotSeq++;
         }
     }
@@ -201,8 +187,12 @@ public class Shotgun : MonoBehaviour
         isReloading = false;
     }
 
+    // ê³µê²©ì ì‹ë³„: PlayerRef.RawEncoded ì‚¬ìš© (ì—†ìœ¼ë©´ -1)
     private int GetShooterId()
     {
-        return 0;
+        var netObj = GetComponentInParent<NetworkObject>();
+        if (netObj != null)
+            return netObj.InputAuthority.RawEncoded;
+        return -1;
     }
 }

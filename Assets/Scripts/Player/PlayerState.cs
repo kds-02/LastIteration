@@ -37,29 +37,25 @@ public class PlayerState : NetworkBehaviour
         animator = GetComponent<Animator>();
         characterController = GetComponent<CharacterController>();
 
-        // ¡Ú ¼­¹ö¿¡¼­¸¸ ºÎÈ° À§Ä¡ ½ºÆ÷³Ê ÂüÁ¶
         if (Object.HasStateAuthority)
             spawner = Spawner.Instance ?? FindObjectOfType<Spawner>();
     }
 
-    // ------- ÀÔ·Â Å×½ºÆ®(L, K) ------- //
+    // Input í…ŒìŠ¤íŠ¸ìš© (L: instant death, K: 10 damage)
     private void Update()
     {
-        // ÀÔ·Â ±ÇÇÑ ÀÖ´Â ·ÎÄÃ Å¬¶óÀÌ¾ğÆ®¸¸
         if (!Object.HasInputAuthority) return;
         if (IsDead) return;
 
-        // L: °­Á¦ Áï»ç
         if (Input.GetKeyDown(KeyCode.L))
         {
-            Debug.Log("[PlayerState] L key pressed ¡æ instant death test");
+            Debug.Log("[PlayerState] L key pressed â†’ instant death test");
             RPC_TakeDamage(9999f, -1);
         }
 
-        // K: 10 µ¥¹ÌÁö
         if (Input.GetKeyDown(KeyCode.K))
         {
-            Debug.Log("[PlayerState] K key pressed ¡æ 10 damage test");
+            Debug.Log("[PlayerState] K key pressed â†’ 10 damage test");
             RPC_TakeDamage(10f, -1);
         }
     }
@@ -72,16 +68,14 @@ public class PlayerState : NetworkBehaviour
         }
     }
 
-    
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     public void RPC_TakeDamage(float damage, int attackerId)
     {
         if (IsDead) return;
 
-        // ¼­¹ö¿¡¼­ ½ÇÁ¦ HP °¨¼Ò
         float before = Hp;
         Hp -= Mathf.Max(0f, damage);
-        Debug.Log($"[PlayerState] RPC_TakeDamage on StateAuthority: {before} -> {Hp}");
+        Debug.Log($"[PlayerState] RPC_TakeDamage on StateAuthority: {before} -> {Hp} | attackerId={attackerId}");
 
         if (Hp <= 0f)
         {
@@ -93,10 +87,13 @@ public class PlayerState : NetworkBehaviour
     {
         if (!Object.HasStateAuthority || IsDead) return;
 
-        Debug.Log("[PlayerState] Die() called");
+        Debug.Log($"[PlayerState] Die() called. attackerId={attackerId}");
 
         IsDead = true;
         Death += 1f;
+
+        if (attackerId >= 0)
+            AddKillToAttacker(attackerId);
 
         RespawnTimer = TickTimer.CreateFromSeconds(Runner, respawnDelay);
 
@@ -134,7 +131,6 @@ public class PlayerState : NetworkBehaviour
     {
         if (!Object.HasStateAuthority) return;
 
-        // ¡å 1) ½ºÆù Æ÷ÀÎÆ®¿¡¼­ À§Ä¡/È¸Àü °¡Á®¿À±â
         Vector3 respawnPos;
         Quaternion respawnRot;
 
@@ -146,20 +142,18 @@ public class PlayerState : NetworkBehaviour
         }
         else
         {
-            // È¤½Ã Spawner ¸ø Ã£¾ÒÀ» ¶§ ´ëºñ¿ë (ÇÊ¿ä ¾øÀ¸¸é »©µµ µÊ)
             respawnPos = transform.position;
             respawnRot = transform.rotation;
         }
 
-        // ¡å 2) Ã¼·Â/»óÅÂ ÃÊ±âÈ­
         Hp = MaxHp;
         IsDead = false;
 
         var pm = GetComponent<PlayerMovement>();
         if (pm != null)
         {
-            pm.ResetMovementState();   // ±âÁ¸ ¼Óµµ ÃÊ±âÈ­
-            pm.OnRespawnFreeze(1);     // ¡Ú ÀÌ Æ½ µ¿¾È ÀÌµ¿ ¸·±â (ÇÊ¿äÇÏ¸é 2·Î ´Ã·Áµµ µÊ)
+            pm.ResetMovementState();
+            pm.OnRespawnFreeze(1);
         }
 
         if (characterController != null)
@@ -264,5 +258,41 @@ public class PlayerState : NetworkBehaviour
             dir = Vector3.forward;
 
         return Quaternion.LookRotation(dir.normalized, Vector3.up);
+    }
+
+    private void AddKillToAttacker(int attackerRawId)
+    {
+        // RawEncoded ê°’ì„ ê°€ì§„ PlayerRefë¥¼ ì°¾ì•„ì„œ í‚¬ ì¦ê°€
+        bool found = false;
+        foreach (var player in Runner.ActivePlayers)
+        {
+            if (player.RawEncoded != attackerRawId)
+                continue;
+
+            found = true;
+            if (Runner.TryGetPlayerObject(player, out var attackerObj))
+            {
+                var attackerState = attackerObj.GetComponent<PlayerState>();
+                if (attackerState != null)
+                {
+                    Debug.Log($"[PlayerState] AddKillToAttacker: attacker={player} (+1)");
+                    attackerState.Kill += 1f;
+                }
+                else
+                {
+                    Debug.LogWarning($"[PlayerState] AddKillToAttacker: PlayerObject found but no PlayerState for {player}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[PlayerState] AddKillToAttacker: PlayerObject not found for {player}");
+            }
+            break;
+        }
+
+        if (!found)
+        {
+            Debug.LogWarning($"[PlayerState] AddKillToAttacker: attackerRawId={attackerRawId} not found in ActivePlayers");
+        }
     }
 }

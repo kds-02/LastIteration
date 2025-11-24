@@ -643,6 +643,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   endgameText: {fileID: 492473363}
   timeText: {fileID: 144519134}
+  matchDurationSeconds: 300
+  minPlayersToStart: 2
 --- !u!114 &119109745
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1595,6 +1597,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 307636528}
+  - component: {fileID: 307636530}
   - component: {fileID: 307636529}
   m_Layer: 0
   m_Name: GameManger
@@ -1632,6 +1635,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   endgameText: {fileID: 492473363}
   timeText: {fileID: 144519134}
+  matchDurationSeconds: 300
+  minPlayersToStart: 2
+--- !u!114 &307636530
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 307636526}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 2873204380
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 307636529}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1001 &308851526
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3113,6 +3137,10 @@ PrefabInstance:
     - target: {fileID: 4478991402482163089, guid: bc07a3ab3dee041b8838e5068eaa9b79, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 4478991402482163089, guid: bc07a3ab3dee041b8838e5068eaa9b79, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5348790621573636792, guid: bc07a3ab3dee041b8838e5068eaa9b79, type: 3}
       propertyPath: SortKey
