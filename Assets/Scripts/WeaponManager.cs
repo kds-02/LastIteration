@@ -4,55 +4,82 @@ using UnityEngine;
 public class WeaponManager : NetworkBehaviour
 {
     [Header("Weapon Settings")]
-    [SerializeField] private Transform gunPoint; // 무기가 장착될 위치
-    [SerializeField] private GameObject riflePrefab;   // 소총 (Kill 0~4)
-    [SerializeField] private GameObject shotgunPrefab; // 샷건 (Kill 5~9)
-    [SerializeField] private GameObject pistolPrefab;  // 권총 (Kill 10~15)
+    [SerializeField] private Transform gunPoint;
+    [SerializeField] private GameObject riflePrefab;
+    [SerializeField] private GameObject shotgunPrefab;
+    [SerializeField] private GameObject pistolPrefab;
+
+    // 네트워크 동기화되는 현재 무기 타입
+    [Networked] private int CurrentWeaponType { get; set; }
 
     private GameObject currentWeaponInstance;
     private PlayerState playerState;
     private int lastKillCount = -1;
+    private int lastWeaponType = -1;
 
     public override void Spawned()
     {
         playerState = GetComponent<PlayerState>();
 
-        // 초기 무기 장착
-        UpdateWeaponByKills();
+        if (Object.HasStateAuthority)
+        {
+            // 서버가 초기 무기 설정
+            CurrentWeaponType = 0; // 소총으로 시작
+        }
+
+        // 모든 클라이언트가 무기 생성
+        UpdateWeaponVisual();
     }
 
     private void Update()
     {
+        // 테스트용 키 입력
         if (Object.HasInputAuthority)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1))
             {
                 Debug.Log("테스트: 소총으로 변경");
-                RPC_TestChangeWeapon(0);
+                RPC_RequestWeaponChange(0);
             }
             else if (Input.GetKeyDown(KeyCode.Alpha2))
             {
                 Debug.Log("테스트: 샷건으로 변경");
-                RPC_TestChangeWeapon(1);
+                RPC_RequestWeaponChange(1);
             }
             else if (Input.GetKeyDown(KeyCode.Alpha3))
             {
                 Debug.Log("테스트: 권총으로 변경");
-                RPC_TestChangeWeapon(2);
+                RPC_RequestWeaponChange(2);
             }
         }
-        if (!Object.HasStateAuthority) return;
 
-        // Kill 수가 변경되었는지 확인
-        if (playerState != null)
+        // 서버만 킬 수에 따른 무기 변경 처리
+        if (Object.HasStateAuthority)
         {
-            int currentKills = (int)playerState.GetKill();
-            if (currentKills != lastKillCount)
+            if (playerState != null)
             {
-                lastKillCount = currentKills;
-                UpdateWeaponByKills();
+                int currentKills = (int)playerState.GetKill();
+                if (currentKills != lastKillCount)
+                {
+                    lastKillCount = currentKills;
+                    UpdateWeaponByKills();
+                }
             }
         }
+
+        // 모든 클라이언트: 무기 타입이 변경되면 시각적 업데이트
+        if (CurrentWeaponType != lastWeaponType)
+        {
+            lastWeaponType = CurrentWeaponType;
+            UpdateWeaponVisual();
+        }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestWeaponChange(int weaponType)
+    {
+        // 서버가 무기 타입 변경 승인
+        CurrentWeaponType = weaponType;
     }
 
     private void UpdateWeaponByKills()
@@ -60,73 +87,71 @@ public class WeaponManager : NetworkBehaviour
         if (playerState == null) return;
 
         int kills = (int)playerState.GetKill();
-        GameObject newWeaponPrefab = GetWeaponPrefabByKills(kills);
+        int newWeaponType = GetWeaponTypeByKills(kills);
 
-        if (newWeaponPrefab != null)
+        if (newWeaponType != CurrentWeaponType)
         {
-            RPC_UpdateWeaponVisual(newWeaponPrefab.name);
+            CurrentWeaponType = newWeaponType;
         }
     }
 
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_TestChangeWeapon(int weaponType)
-    {
-        GameObject weaponPrefab = null;
-
-        switch (weaponType)
-        {
-            case 0: weaponPrefab = riflePrefab; break;   // 소총
-            case 1: weaponPrefab = shotgunPrefab; break; // 샷건
-            case 2: weaponPrefab = pistolPrefab; break;  // 권총
-        }
-
-        if (weaponPrefab != null)
-        {
-            RPC_UpdateWeaponVisual(weaponPrefab.name);
-        }
-    }
-
-    private GameObject GetWeaponPrefabByKills(int kills)
+    private int GetWeaponTypeByKills(int kills)
     {
         if (kills >= 10 && kills <= 15)
-            return pistolPrefab;  // 권총
+            return 2; // 권총
         else if (kills >= 5 && kills <= 9)
-            return shotgunPrefab; // 샷건
+            return 1; // 샷건
         else
-            return riflePrefab;   // 소총 (0~4 또는 16+)
+            return 0; // 소총
     }
 
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_UpdateWeaponVisual(string weaponName)
+    private void UpdateWeaponVisual()
     {
         // 기존 무기 제거
         if (currentWeaponInstance != null)
         {
             Destroy(currentWeaponInstance);
+            currentWeaponInstance = null;
         }
 
-        // 무기 이름으로 프리팹 찾기
+        // 무기 타입에 따라 프리팹 선택
         GameObject weaponPrefab = null;
-        if (weaponName == riflePrefab?.name)
-            weaponPrefab = riflePrefab;
-        else if (weaponName == shotgunPrefab?.name)
-            weaponPrefab = shotgunPrefab;
-        else if (weaponName == pistolPrefab?.name)
-            weaponPrefab = pistolPrefab;
+        string weaponName = "";
 
-        // 새 무기 생성
+        switch (CurrentWeaponType)
+        {
+            case 0:
+                weaponPrefab = riflePrefab;
+                weaponName = "소총";
+                break;
+            case 1:
+                weaponPrefab = shotgunPrefab;
+                weaponName = "샷건";
+                break;
+            case 2:
+                weaponPrefab = pistolPrefab;
+                weaponName = "권총";
+                break;
+        }
+
+        // 새 무기 생성 (로컬에서만)
         if (weaponPrefab != null && gunPoint != null)
         {
             currentWeaponInstance = Instantiate(weaponPrefab, gunPoint);
             currentWeaponInstance.transform.localPosition = Vector3.zero;
             currentWeaponInstance.transform.localRotation = Quaternion.identity;
 
-            Debug.Log($"Weapon equipped: {weaponPrefab.name}");
+            Debug.Log($"[{(Object.HasStateAuthority ? "Server" : "Client")}] Weapon equipped: {weaponName}");
         }
     }
 
     public GameObject GetCurrentWeapon()
     {
         return currentWeaponInstance;
+    }
+
+    public int GetCurrentWeaponType()
+    {
+        return CurrentWeaponType;
     }
 }
