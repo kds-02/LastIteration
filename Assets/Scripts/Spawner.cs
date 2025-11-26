@@ -31,7 +31,10 @@ public class Spawner : MonoBehaviour
     public Transform GetRandomSpawnPoint()
     {
         if (spawnPoints == null || spawnPoints.Length == 0)
-            return null;
+        {
+            Debug.LogWarning("[Spawner] spawnPoints가 비어 있습니다. 현재 위치로 반환합니다.");
+            return transform; // null 반환 대신 자기 Transform
+        }
 
         int idx = Random.Range(0, spawnPoints.Length);
         Debug.Log($"[Spawner] Respawn spawn index={idx}");

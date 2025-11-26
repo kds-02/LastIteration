@@ -62,9 +62,13 @@ public class PlayerState : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (Object.HasStateAuthority && IsDead && RespawnTimer.ExpiredOrNotRunning(Runner))
+        if (Object.HasStateAuthority)
         {
-            Respawn();
+            if (IsDead && RespawnTimer.ExpiredOrNotRunning(Runner))
+            {
+                Debug.Log($"[PlayerState] Respawn check passed (authority). IsDead={IsDead} timerExpired={RespawnTimer.ExpiredOrNotRunning(Runner)}");
+                Respawn();
+            }
         }
     }
 
@@ -96,6 +100,7 @@ public class PlayerState : NetworkBehaviour
             AddKillToAttacker(attackerId);
 
         RespawnTimer = TickTimer.CreateFromSeconds(Runner, respawnDelay);
+        Debug.Log($"[PlayerState] RespawnTimer started for {respawnDelay}s (IsDead={IsDead})");
 
         RPC_PlayDeathAnimation();
     }
@@ -130,6 +135,7 @@ public class PlayerState : NetworkBehaviour
     private void Respawn()
     {
         if (!Object.HasStateAuthority) return;
+        Debug.Log("[PlayerState] Respawn() called (authority)");
 
         Vector3 respawnPos;
         Quaternion respawnRot;
