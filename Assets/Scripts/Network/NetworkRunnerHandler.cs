@@ -12,6 +12,7 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
     [Header("Session Settings")]
     [SerializeField] private string sessionName = "SingleRoom";
     [SerializeField] private SceneRef gameScene; // 실제 플레이 씬 (메인 메뉴-> 이동)
+    [SerializeField] private int maxPlayers = 4; // 방 인원 제한
 
     private NetworkRunner _runner;
     private PlayerSpawner _spawner;
@@ -85,24 +86,38 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
 
         // 2) TestRoom 존재 여부 판단 → Host/Client 결정
         bool roomExists = false;
+        bool roomFull = false;
 
+        SessionInfo matchedInfo = default;
         foreach (var info in sessionList)
         {
             if (info.Name == sessionName)
             {
                 roomExists = true;
+                matchedInfo = info;
+                if (info.PlayerCount >= maxPlayers)
+                {
+                    roomFull = true;
+                }
                 break;
             }
         }
 
         if (roomExists)
         {
+            if (roomFull) // 방 다 찼으면 접속X 다시 시도하도록
+            {
+                Debug.LogWarning($"[Fusion] 방({sessionName}) 인원 초과({matchedInfo.PlayerCount}/{maxPlayers}) → 접속 거절");
+                _isStarting = false;
+                return;
+            }
             args.GameMode = GameMode.Client;
             Debug.Log("기존 방 존재 → Client로 접속");
         }
         else
         {
             args.GameMode = GameMode.Host;
+            args.PlayerCount = maxPlayers; // 호스트 생성 시 최대 인원 설정
             Debug.Log("방 없음 → Host로 생성");
         }
 
