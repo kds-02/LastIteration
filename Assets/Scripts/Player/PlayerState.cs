@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class PlayerState : NetworkBehaviour
 {
+    [Networked] public NetworkString<_64> UserId { get; set; }
+    [Networked] public NetworkString<_32> Nickname { get; set; }
     [Networked] public float Hp { get; set; } = 100f;
     [Networked] public float MaxHp { get; set; } = 100f;
     [Networked] public float Kill { get; set; } = 0f;
@@ -31,6 +33,18 @@ public class PlayerState : NetworkBehaviour
             IsDead = false;
         }
 
+        // 로컬 플레이어인 경우 AuthManager에서 user_id와 nickname 설정
+        if (Object.HasInputAuthority)
+        {
+            string localUserId = AuthManager.GetUserId();
+            string localNickname = AuthManager.GetNickname();
+
+            if (!string.IsNullOrEmpty(localUserId) || !string.IsNullOrEmpty(localNickname))
+            {
+                RPC_SetUserInfo(localUserId ?? "", localNickname ?? "");
+            }
+        }
+
         colliders = GetComponentsInChildren<Collider>(true);
         renderers = GetComponentsInChildren<Renderer>(true);
         rb = GetComponent<Rigidbody>();
@@ -39,6 +53,14 @@ public class PlayerState : NetworkBehaviour
 
         if (Object.HasStateAuthority)
             spawner = Spawner.Instance ?? FindObjectOfType<Spawner>();
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_SetUserInfo(string userId, string nickname)
+    {
+        UserId = userId;
+        Nickname = nickname;
+        Debug.Log($"[PlayerState] User info set: userId={userId}, nickname={nickname}");
     }
 
     // Input 테스트용 (L: instant death, K: 10 damage)
@@ -232,6 +254,8 @@ public class PlayerState : NetworkBehaviour
     public float GetDeath() => Death;
     public float GetHp() => Hp;
     public float GetMaxHp() => MaxHp;
+    public string GetUserId() => UserId.ToString();
+    public string GetNickname() => Nickname.ToString();
 
     private Vector3 GetRandomEdgePosition()
     {

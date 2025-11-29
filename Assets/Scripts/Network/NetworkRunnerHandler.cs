@@ -72,9 +72,10 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log($"[Fusion] 세션 리스트 업데이트 (총 {sessionList.Count}개)");
 
         // 메인 메뉴에서 버튼을 누를 때, 실제 게임 씬을 네트워크 씬으로 등록
+        // SampleScene은 빌드 인덱스 3
         var targetScene = gameScene.IsValid
             ? gameScene
-            : SceneRef.FromIndex(SceneManager.GetActiveScene().buildIndex);
+            : SceneRef.FromIndex(3); // SampleScene
 
         StartGameArgs args = new StartGameArgs()
         {
