@@ -134,8 +134,10 @@ public class Gun : MonoBehaviour
         else if (audioSource != null && fireSound != null)
             audioSource.PlayOneShot(fireSound, fireSoundVolume);
 
-        // 총구 방향으로 레이캐스트하여 히트 이펙트 표시
-        if (Physics.Raycast(firePoint.position, direction, out RaycastHit hit, maxRayDistance))
+        // 총구 방향으로 레이캐스트하여 히트 이펙트 표시 (Bullet 레이어 제외)
+        int bulletLayer = LayerMask.NameToLayer("Bullet");
+        int layerMask = bulletLayer != -1 ? ~(1 << bulletLayer) : ~0;
+        if (Physics.Raycast(firePoint.position, direction, out RaycastHit hit, maxRayDistance, layerMask))
         {
             if (hitEffectPrefab != null)
             {

@@ -14,6 +14,14 @@ public class Bullet : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+
+        // 총알 레이어 설정 및 총알끼리 물리 충돌 비활성화 (Awake에서 해야 Start 전 충돌 방지)
+        int bulletLayer = LayerMask.NameToLayer("Bullet");
+        if (bulletLayer != -1)
+        {
+            gameObject.layer = bulletLayer;
+            Physics.IgnoreLayerCollision(bulletLayer, bulletLayer, true);
+        }
     }
 
     void OnEnable()
@@ -28,7 +36,6 @@ public class Bullet : MonoBehaviour
         {
             rb.velocity = transform.forward * speed;
             velocitySet = true;
-            Debug.Log($"[Bullet] Velocity set: {rb.velocity}, forward: {transform.forward}");
         }
     }
 

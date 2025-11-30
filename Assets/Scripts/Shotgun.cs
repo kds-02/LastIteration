@@ -140,8 +140,10 @@ public class Shotgun : MonoBehaviour
             Quaternion spreadRotation = Quaternion.Euler(randomY, randomX, 0f);
             Vector3 spreadDirection = spreadRotation * baseDirection;
 
-            // 총구 방향으로 레이캐스트
-            if (Physics.Raycast(firePoint.position, spreadDirection, out RaycastHit hit, maxRayDistance))
+            // 총구 방향으로 레이캐스트 (Bullet 레이어 제외)
+            int bulletLayer = LayerMask.NameToLayer("Bullet");
+            int layerMask = bulletLayer != -1 ? ~(1 << bulletLayer) : ~0;
+            if (Physics.Raycast(firePoint.position, spreadDirection, out RaycastHit hit, maxRayDistance, layerMask))
             {
                 if (hitEffectPrefab != null)
                 {
