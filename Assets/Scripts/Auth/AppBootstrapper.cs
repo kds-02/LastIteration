@@ -8,6 +8,8 @@ public class AppBootstrapper : MonoBehaviour
 
     private void Start()
     {
+        Screen.SetResolution(Screen.currentResolution.width, Screen.currentResolution.height, FullScreenMode.FullScreenWindow);
+
         if (splashDelay > 0)
         {
             Invoke(nameof(CheckAuthAndNavigate), splashDelay);
