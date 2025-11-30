@@ -114,9 +114,9 @@ public class Shotgun : MonoBehaviour
 
     void Fire()
     {
-        if (bulletPrefab == null || firePoint == null || playerCamera == null)
+        if (bulletPrefab == null || firePoint == null)
         {
-            Debug.LogError($"Missing: bulletPrefab={bulletPrefab}, firePoint={firePoint}, camera={playerCamera}");
+            Debug.LogError($"Missing: bulletPrefab={bulletPrefab}, firePoint={firePoint}");
             return;
         }
 
@@ -128,48 +128,34 @@ public class Shotgun : MonoBehaviour
         else if (audioSource != null && fireSound != null)
             audioSource.PlayOneShot(fireSound, fireSoundVolume);
 
-        // 중앙 레이 계산
-        Ray centerRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        // 총구 방향 기준
+        Vector3 baseDirection = firePoint.forward;
 
         for (int i = 0; i < pelletsPerShot; i++)
         {
-            // Quaternion으로 spread 적용
+            // 총구 방향에서 산탄 퍼짐 적용
             float randomX = Random.Range(-spreadAngle, spreadAngle);
             float randomY = Random.Range(-spreadAngle, spreadAngle);
 
             Quaternion spreadRotation = Quaternion.Euler(randomY, randomX, 0f);
-            Vector3 spreadDirection = spreadRotation * centerRay.direction;
+            Vector3 spreadDirection = spreadRotation * baseDirection;
 
-            Ray ray = new Ray(centerRay.origin, spreadDirection);
-            Vector3 targetPoint;
-
-            if (Physics.Raycast(ray, out RaycastHit hit, maxRayDistance))
+            // 총구 방향으로 레이캐스트
+            if (Physics.Raycast(firePoint.position, spreadDirection, out RaycastHit hit, maxRayDistance))
             {
-                targetPoint = hit.point;
-
                 if (hitEffectPrefab != null)
                 {
                     GameObject effect = Instantiate(hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
                     Destroy(effect, 2f);
                 }
             }
-            else
-            {
-                targetPoint = ray.GetPoint(maxRayDistance);
-            }
 
             // 총알이 firePoint에서 약간 오프셋을 주어 더 퍼져보이게
-            Vector3 spawnOffset = Random.insideUnitSphere * 0.1f; // 0.1 반경 내에서 랜덤 생성
-            spawnOffset.z = 0; // 앞뒤 방향은 오프셋 없음
+            Vector3 spawnOffset = Random.insideUnitSphere * 0.1f;
+            spawnOffset.z = 0;
             Vector3 spawnPosition = firePoint.position + firePoint.TransformDirection(spawnOffset);
 
-            Vector3 direction = (targetPoint - spawnPosition).normalized;
-
-            Debug.Log($"[Shotgun] Pellet {i}: spawnPos={spawnPosition}, targetPoint={targetPoint}, direction={direction}");
-
-            var bulletGo = Instantiate(bulletPrefab, spawnPosition, Quaternion.LookRotation(direction));
-
-            Debug.Log($"[Shotgun] Bullet instantiated: {bulletGo.name}, position={bulletGo.transform.position}, rotation={bulletGo.transform.rotation}");
+            var bulletGo = Instantiate(bulletPrefab, spawnPosition, Quaternion.LookRotation(spreadDirection));
 
             var b = bulletGo.GetComponent<Bullet>();
             if (b != null)
@@ -177,11 +163,6 @@ public class Shotgun : MonoBehaviour
                 b.shooterId = GetShooterId();
                 b.damage = 10f;
                 shotSeq++;
-                Debug.Log($"[Shotgun] Bullet component found, shooterId={b.shooterId}");
-            }
-            else
-            {
-                Debug.LogError("[Shotgun] No Bullet component on bullet!");
             }
         }
 

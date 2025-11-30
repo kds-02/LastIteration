@@ -123,10 +123,10 @@ public class Gun : MonoBehaviour
 
     void Fire()
     {
-        if (bulletPrefab == null || firePoint == null || playerCamera == null) return;
+        if (bulletPrefab == null || firePoint == null) return;
 
-        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        Vector3 targetPoint;
+        // 총구 방향으로 발사
+        Vector3 direction = firePoint.forward;
 
         // 발사 소리를 모든 클라이언트에 브로드캐스트
         if (weaponManager != null)
@@ -134,22 +134,16 @@ public class Gun : MonoBehaviour
         else if (audioSource != null && fireSound != null)
             audioSource.PlayOneShot(fireSound, fireSoundVolume);
 
-        if (Physics.Raycast(ray, out RaycastHit hit, maxRayDistance))
+        // 총구 방향으로 레이캐스트하여 히트 이펙트 표시
+        if (Physics.Raycast(firePoint.position, direction, out RaycastHit hit, maxRayDistance))
         {
-            targetPoint = hit.point;
-
             if (hitEffectPrefab != null)
             {
                 GameObject effect = Instantiate(hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
                 Destroy(effect, 2f);
             }
         }
-        else
-        {
-            targetPoint = ray.GetPoint(maxRayDistance);
-        }
 
-        Vector3 direction = (targetPoint - firePoint.position).normalized;
         var bulletGo = Instantiate(bulletPrefab, firePoint.position, Quaternion.LookRotation(direction));
 
         // 발사???��?지 ?�정
