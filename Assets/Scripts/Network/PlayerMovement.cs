@@ -20,8 +20,17 @@ public class PlayerMovement : NetworkBehaviour
     [Header("앉기 설정")]
     [SerializeField] private float standingHeight = 2f;     // 서 있을 때 높이
     [SerializeField] private float crouchingHeight = 1f;    // 앉았을 때 높이
+    [SerializeField] private float standingCameraY = 1.6f;  // 서 있을 때 카메라 높이
+    [SerializeField] private float crouchingCameraY = 0.8f; // 앉았을 때 카메라 높이
+    [SerializeField] private float crouchLerpSpeed = 10f;   // 앉기 전환 속도
 
     private CharacterController controller;
+    private Transform cameraPivot;
+    private Transform gunPoint;
+    private float targetCameraY;
+    private float targetGunY;
+    private float standingGunY;
+    private float crouchingGunYOffset = -0.4f; // 앉을 때 총 내려가는 정도
     private Animator animator;
 
     private Vector3 velocity;             // 수직 속도(중력/점프)
@@ -42,12 +51,34 @@ public class PlayerMovement : NetworkBehaviour
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+        cameraPivot = transform.Find("CameraPivot");
+        gunPoint = FindChildRecursive(transform, "GunPoint");
 
         standingHeight = controller.height;
+        targetCameraY = standingCameraY;
 
-        // 로컬 플레이어일 때만 카메라를 연결
+        if (gunPoint != null)
+        {
+            standingGunY = gunPoint.localPosition.y;
+            targetGunY = standingGunY;
+        }
+
+        // 로컬 플레이어일 때만 카메라를 연결 + 왼팔 숨기기
         if (Object.HasInputAuthority)
+        {
             StartCoroutine(SetupCamera());
+            HideLeftArmForLocal();
+        }
+    }
+
+    private void HideLeftArmForLocal()
+    {
+        Transform leftShoulder = FindChildRecursive(transform, "B-shoulder.L");
+        if (leftShoulder != null)
+        {
+            leftShoulder.localScale = Vector3.zero;
+            Debug.Log("[PlayerMovement] Left arm hidden for local player");
+        }
     }
 
     // 카메라 연결
@@ -138,12 +169,16 @@ public class PlayerMovement : NetworkBehaviour
             isCrouching = true;
             controller.height = crouchingHeight;
             controller.center = new Vector3(0, crouchingHeight / 2, 0);
+            targetCameraY = crouchingCameraY;
+            targetGunY = standingGunY + crouchingGunYOffset;
         }
         else if (!data.crouchHeld && isCrouching)
         {
             isCrouching = false;
             controller.height = standingHeight;
             controller.center = new Vector3(0, standingHeight / 2, 0);
+            targetCameraY = standingCameraY;
+            targetGunY = standingGunY;
         }
 
         // --- 이동 방향 (서버 기준 yaw) ---
@@ -206,6 +241,24 @@ public class PlayerMovement : NetworkBehaviour
         animator.SetFloat("Speed", speedParam);
     }
 
+    // 부드러운 카메라/총 높이 전환
+    public override void Render()
+    {
+        if (cameraPivot != null)
+        {
+            Vector3 camPos = cameraPivot.localPosition;
+            camPos.y = Mathf.Lerp(camPos.y, targetCameraY, crouchLerpSpeed * Time.deltaTime);
+            cameraPivot.localPosition = camPos;
+        }
+
+        if (gunPoint != null)
+        {
+            Vector3 gunPos = gunPoint.localPosition;
+            gunPos.y = Mathf.Lerp(gunPos.y, targetGunY, crouchLerpSpeed * Time.deltaTime);
+            gunPoint.localPosition = gunPos;
+        }
+    }
+
     // ▼ Respawn 시 PlayerState에서 호출하는 함수들 ▼
 
     // 속도/중력 상태 초기화
@@ -219,5 +272,19 @@ public class PlayerMovement : NetworkBehaviour
     public void OnRespawnFreeze(int ticks = 1)
     {
         freezeTicksAfterRespawn = Mathf.Max(freezeTicksAfterRespawn, ticks);
+    }
+
+    // 자식 오브젝트에서 재귀적으로 이름으로 찾기
+    private Transform FindChildRecursive(Transform parent, string name)
+    {
+        foreach (Transform child in parent)
+        {
+            if (child.name == name)
+                return child;
+            var result = FindChildRecursive(child, name);
+            if (result != null)
+                return result;
+        }
+        return null;
     }
 }
