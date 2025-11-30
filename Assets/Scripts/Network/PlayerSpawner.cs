@@ -9,13 +9,15 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private GameObject playerPrefab;
     private readonly Dictionary<PlayerRef, NetworkObject> spawnedPlayers = new Dictionary<PlayerRef, NetworkObject>();
 
-    // 마우스 델타 누적용
     private float accumulatedMouseX = 0f;
+    private bool jumpPressed = false;
 
-    // 매 프레임 마우스 X 델타 누적
     private void Update()
     {
         accumulatedMouseX += Input.GetAxisRaw("Mouse X");
+
+        if (Input.GetKeyDown(KeyCode.Space))
+            jumpPressed = true;
     }
 
     // 플레이어가 룸에 입장했을 때 호출됨
@@ -68,13 +70,13 @@ public class PlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
         float y = Input.GetAxisRaw("Vertical");
         data.moveInput = new Vector2(x, y);
 
-        data.jumpPressed = Input.GetKeyDown(KeyCode.Space); //  점프 입력
-        data.runHeld = Input.GetKey(KeyCode.LeftShift); //  달리기 입력
-        data.crouchHeld = Input.GetKey(KeyCode.LeftControl); //  앉기 입력
+        data.jumpPressed = jumpPressed;
+        data.runHeld = Input.GetKey(KeyCode.LeftShift);
+        data.crouchHeld = Input.GetKey(KeyCode.LeftControl);
 
-        // 누적된 마우스 X 델타 사용 후 리셋
         data.mouseDeltaX = accumulatedMouseX;
         accumulatedMouseX = 0f;
+        jumpPressed = false;
 
         input.Set(data);
     }
