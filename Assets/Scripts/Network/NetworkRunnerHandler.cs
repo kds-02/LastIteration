@@ -6,6 +6,7 @@ using Fusion.Sockets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.Text;
 
 // 네트워크 전체를 관리하는 매니저 (싱글룸 매칭 UI 버튼 기반)
 public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
@@ -153,6 +154,13 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
     // Runner 실행 처리
     private async Task StartRunner(StartGameArgs args)
     {
+        // 인증 토큰을 연결 토큰으로 전달 (있을 때만)
+        string token = AuthManager.GetToken();
+        if (!string.IsNullOrEmpty(token))
+        {
+            args.ConnectionToken = Encoding.UTF8.GetBytes(token);
+        }
+
         var result = await _runner.StartGame(args);
 
         if (result.Ok)

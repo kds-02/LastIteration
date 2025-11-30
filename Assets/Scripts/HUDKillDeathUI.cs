@@ -7,6 +7,7 @@ public class HUDKillDeathUI : MonoBehaviour
     private PlayerState player;   // 로컬 플레이어의 PlayerState
     private Text kdText;          // K/D 표시용
     private Text respawnText;     // 리스폰 시간 표시용
+    private Text nameText;        // 닉네임 표시용
 
     void Start()
     {
@@ -19,6 +20,8 @@ public class HUDKillDeathUI : MonoBehaviour
                 kdText = t;
             else if (nameLower.Contains("respawn"))
                 respawnText = t;
+            else if (nameLower.Contains("name"))
+                nameText = t;
         }
 
         // 초기화
@@ -28,6 +31,8 @@ public class HUDKillDeathUI : MonoBehaviour
             respawnText.text = "";
             respawnText.enabled = false;
         }
+
+        if (nameText != null) nameText.text = "";
     }
 
     void Update()
@@ -54,6 +59,11 @@ public class HUDKillDeathUI : MonoBehaviour
         if (kdText != null)
         {
             kdText.text = $"{player.GetKill():0}          {player.GetDeath():0}";
+        }
+
+        if (nameText != null)
+        {
+            nameText.text = player.GetNickname();
         }
 
         // --- 사망 시 리스폰 남은 시간 (서버 TickTimer 기반) ---

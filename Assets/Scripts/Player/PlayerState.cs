@@ -39,10 +39,10 @@ public class PlayerState : NetworkBehaviour
             string localUserId = AuthManager.GetUserId();
             string localNickname = AuthManager.GetNickname();
 
-            if (!string.IsNullOrEmpty(localUserId) || !string.IsNullOrEmpty(localNickname))
-            {
-                RPC_SetUserInfo(localUserId ?? "", localNickname ?? "");
-            }
+            if (string.IsNullOrEmpty(localNickname))
+                localNickname = $"Player{Object.InputAuthority.PlayerId}";
+
+            RPC_SetUserInfo(localUserId ?? "", localNickname ?? "");
         }
 
         colliders = GetComponentsInChildren<Collider>(true);
