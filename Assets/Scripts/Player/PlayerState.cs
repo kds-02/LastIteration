@@ -216,6 +216,7 @@ public class PlayerState : NetworkBehaviour
         {
             animator.SetBool("IsDead", false);
             animator.Rebind();
+            animator.Update(0f);
         }
 
         if (rb != null)
@@ -227,6 +228,8 @@ public class PlayerState : NetworkBehaviour
 
         if (characterController != null)
         {
+            characterController.height = 2f;
+            characterController.center = new Vector3(0, 1f, 0);
             characterController.enabled = true;
         }
 
