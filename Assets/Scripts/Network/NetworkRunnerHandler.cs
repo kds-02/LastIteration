@@ -5,14 +5,20 @@ using Fusion.Photon.Realtime;
 using Fusion.Sockets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 // 네트워크 전체를 관리하는 매니저 (싱글룸 매칭 UI 버튼 기반)
 public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
 {
     [Header("Session Settings")]
     [SerializeField] private string sessionName = "SingleRoom";
-    [SerializeField] private SceneRef gameScene; // 실제 플레이 씬 (메인 메뉴-> 이동)
-    [SerializeField] private int maxPlayers = 4; // 방 인원 제한
+    [SerializeField] private SceneRef gameScene;
+    [SerializeField] private int maxPlayers = 4;
+
+    [Header("UI References")]
+    [SerializeField] private Button startButton;
+    [SerializeField] private Text startButtonText;
+    private string _originalButtonText;
 
     private NetworkRunner _runner;
     private PlayerSpawner _spawner;
@@ -44,7 +50,6 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log("[Fusion] NetworkRunnerHandler Awake 완료");
     }
 
-    // UI Start 버튼 클릭할 때 실행되는 함수
     public async void StartSession()
     {
         if (_isStarting)
@@ -54,13 +59,32 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
         }
 
         _isStarting = true;
+        SetMatchingUI(true);
         Debug.Log("[Fusion] Start 버튼 → 매칭 시작");
 
-        // 1) 로비 접속
         await _runner.JoinSessionLobby(SessionLobby.Shared);
 
         Debug.Log("[Fusion] 로비 접속 완료 → 세션 리스트 대기");
-        _waitingForSessionList = true; // 세션 리스트 콜백 대기 시작
+        _waitingForSessionList = true;
+    }
+
+    private void SetMatchingUI(bool isMatching)
+    {
+        if (startButton != null)
+            startButton.interactable = !isMatching;
+
+        if (startButtonText != null)
+        {
+            if (isMatching)
+            {
+                _originalButtonText = startButtonText.text;
+                startButtonText.text = "매칭중...";
+            }
+            else
+            {
+                startButtonText.text = _originalButtonText;
+            }
+        }
     }
 
     // 로비 세션 목록이 갱신될 때 Host/Client 자동 선택
@@ -106,10 +130,11 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
 
         if (roomExists)
         {
-            if (roomFull) // 방 다 찼으면 접속X 다시 시도하도록
+            if (roomFull)
             {
                 Debug.LogWarning($"[Fusion] 방({sessionName}) 인원 초과({matchedInfo.PlayerCount}/{maxPlayers}) → 접속 거절");
                 _isStarting = false;
+                SetMatchingUI(false);
                 return;
             }
             args.GameMode = GameMode.Client;
@@ -137,7 +162,8 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
         else
         {
             Debug.LogError($"세션 실행 실패: {result.ShutdownReason}");
-            _isStarting = false; // 실패했으므로 다시 StartSession 가능
+            _isStarting = false;
+            SetMatchingUI(false);
         }
     }
 
@@ -150,6 +176,7 @@ public class NetworkRunnerHandler : MonoBehaviour, INetworkRunnerCallbacks
 
         _isStarting = false;
         _waitingForSessionList = false;
+        SetMatchingUI(false);
         Destroy(gameObject);
     }
 
